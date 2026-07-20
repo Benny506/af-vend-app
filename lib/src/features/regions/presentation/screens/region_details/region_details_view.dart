@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
+import 'package:flag/flag.dart';
 
 import 'package:info_popup/info_popup.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -192,71 +193,44 @@ class _RegionDetailsViewState extends State<RegionDetailsView> {
                       FlexExpansionTile(
                         initiallyExpanded: true,
                         trailing: TextButton.icon(
-                            onPressed: () async {},
-                            icon: Icon(LucideIcons.squarePen),
-                            label: Text('Edit')),
+                            onPressed: () {
+                              context.pushRoute(AddUpdateRegionRoute(region: region));
+                            },
+                            icon: const Icon(LucideIcons.squarePen, size: 16),
+                            label: const Text('Edit')),
                         title: const Text('Region Overview'),
                         childPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
-                        child: Column(
+                        child: GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 1.5,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(12.0),
-                              decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.all(Radius.circular(12.0)),
-                                color: Theme.of(context).scaffoldBackgroundColor,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Currency'),
-                                  Text(region.currencyCode?.toUpperCase() ?? '-'),
-                                ],
-                              ),
+                            OverviewGridTile(
+                              title: 'Currency',
+                              value: region.currencyCode?.toUpperCase() ?? '-',
+                              icon: Icons.payments_outlined,
+                              iconColor: Colors.blue.shade600,
                             ),
-                            space,
-                            Container(
-                              padding: const EdgeInsets.all(12.0),
-                              decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.all(Radius.circular(12.0)),
-                                color: Theme.of(context).scaffoldBackgroundColor,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Automatic Taxes'),
-                                  Text(region.automaticTaxes == true ? 'Enabled' : 'Disabled'),
-                                ],
-                              ),
+                            OverviewGridTile(
+                              title: 'Automatic Taxes',
+                              value: region.automaticTaxes == true ? 'Enabled' : 'Disabled',
+                              icon: Icons.percent_outlined,
+                              iconColor: Colors.purple.shade600,
                             ),
-                            space,
-                            Container(
-                              padding: const EdgeInsets.all(12.0),
-                              decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.all(Radius.circular(12.0)),
-                                color: Theme.of(context).scaffoldBackgroundColor,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Tax inclusive pricing'),
-                                  Text('-'),
-                                ],
-                              ),
+                            OverviewGridTile(
+                              title: 'Default Tax Rate',
+                              value: getTaxRateText(region),
+                              icon: Icons.receipt_long_outlined,
+                              iconColor: Colors.teal.shade600,
                             ),
-                            space,
-                            Container(
-                              padding: const EdgeInsets.all(12.0),
-                              decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.all(Radius.circular(12.0)),
-                                color: Theme.of(context).scaffoldBackgroundColor,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Payment Providers'),
-                                  Text('-'),
-                                ],
-                              ),
+                            OverviewGridTile(
+                              title: 'Payment Providers',
+                              value: getPaymentProviders(region),
+                              icon: Icons.credit_card_outlined,
+                              iconColor: Colors.indigo.shade600,
                             ),
                           ],
                         ),
@@ -292,8 +266,8 @@ class _RegionDetailsViewState extends State<RegionDetailsView> {
                                   );
                                 }
                               },
-                              label: Text('Add Countries'),
-                              icon: Icon(LucideIcons.plus)),
+                              label: const Text('Add Countries'),
+                              icon: const Icon(LucideIcons.plus, size: 16)),
                           childPadding:
                               const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
                           child: Column(
@@ -330,10 +304,33 @@ class _RegionDetailsViewState extends State<RegionDetailsView> {
                                       setState(() {});
                                     },
                                     title: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(currency.name),
-                                        Text(currency.iso2.toUpperCase()),
+                                        if (currency.iso2 != null) ...[
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(2.0),
+                                            child: Flag.fromString(
+                                              currency.iso2!.toUpperCase(),
+                                              height: 12,
+                                              width: 18,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10.0),
+                                        ],
+                                        Expanded(
+                                          child: Text(
+                                            currency.name,
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                          ),
+                                        ),
+                                        Text(
+                                          currency.iso2.toUpperCase(),
+                                          style: TextStyle(
+                                            color: Colors.grey.shade500,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -342,6 +339,69 @@ class _RegionDetailsViewState extends State<RegionDetailsView> {
                             }).toList(),
                           ),
                         ),
+                      space,
+                      FlexExpansionTile(
+                        initiallyExpanded: true,
+                        title: const Text('Tax Rates & Rules'),
+                        childPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              title: const Text('Default Tax Rate'),
+                              subtitle: const Text('Standard tax rate applied to products'),
+                              trailing: Chip(
+                                label: Text(getTaxRateText(region)),
+                                backgroundColor: Colors.teal.shade100,
+                                labelStyle: TextStyle(color: Colors.teal.shade800, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            if (region.metadata?['tax_rates'] != null &&
+                                (region.metadata?['tax_rates'] as List).isNotEmpty) ...[
+                              const Divider(),
+                              ...(region.metadata?['tax_rates'] as List).map((rateItem) {
+                                if (rateItem is! Map) return const SizedBox.shrink();
+                                final rateVal = rateItem['rate'] ?? 0;
+                                final rateName = rateItem['name'] ?? 'Tax Rate';
+                                final rateCode = rateItem['code'] ?? 'N/A';
+                                return ListTile(
+                                  title: Text(rateName),
+                                  subtitle: Text('Code: $rateCode'),
+                                  trailing: Chip(
+                                    label: Text('$rateVal%'),
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          ],
+                        ),
+                      ),
+                      space,
+                      FlexExpansionTile(
+                        initiallyExpanded: true,
+                        title: const Text('Providers'),
+                        childPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: Icon(Icons.payment_outlined, color: Colors.blue.shade600),
+                              title: const Text('Payment Providers'),
+                              subtitle: Text(
+                                getPaymentProviders(region),
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            const Divider(),
+                            ListTile(
+                              leading: Icon(Icons.local_shipping_outlined, color: Colors.indigo.shade600),
+                              title: const Text('Fulfillment Providers'),
+                              subtitle: Text(
+                                getFulfillmentProviders(region),
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       space,
                       FlexExpansionTile(
                         initiallyExpanded: true,
@@ -437,30 +497,111 @@ class _RegionDetailsViewState extends State<RegionDetailsView> {
     return result;
   }
 
-// String getPaymentProviders(Region region) {
-//   if (region.paymentProviders == null || region.paymentProviders!.isEmpty) {
-//     return 'No payment providers configured';
-//   }
-//   String paymentProviders = '';
-//   for (PaymentProvider payment in region.paymentProviders!) {
-//     if (paymentProviders.isNotEmpty) {
-//       paymentProviders = '$paymentProviders, ${payment.id}';
-//     } else {
-//       paymentProviders = payment.id;
-//     }
-//   }
-//   return paymentProviders.capitalize;
-// }
+  String getPaymentProviders(Region region) {
+    final providers = region.metadata?['payment_providers'];
+    if (providers is List && providers.isNotEmpty) {
+      return providers
+          .map((p) => p is Map ? (p['id'] ?? '') : p.toString())
+          .join(', ')
+          .toUpperCase();
+    }
+    return 'None';
+  }
 
-// String getFulfilmentProviders(Region region) {
-//   String fulfilmentProviders = '';
-//   // for (FulfillmentProvider fulfillment in region.fulfillmentProviders) {
-//   //   if (fulfilmentProviders.isNotEmpty) {
-//   //     fulfilmentProviders = '$fulfilmentProviders, ${fulfillment.id!}';
-//   //   } else {
-//   //     fulfilmentProviders = fulfillment.id!;
-//   //   }
-//   // }
-//   return fulfilmentProviders.capitalize;
-// }
+  String getFulfillmentProviders(Region region) {
+    final providers = region.metadata?['fulfillment_providers'];
+    if (providers is List && providers.isNotEmpty) {
+      return providers
+          .map((p) => p is Map ? (p['id'] ?? '') : p.toString())
+          .join(', ')
+          .toUpperCase();
+    }
+    return 'None';
+  }
+
+  String getTaxRateText(Region region) {
+    final taxRate = region.metadata?['tax_rate'];
+    if (taxRate != null) {
+      return '$taxRate%';
+    }
+    return '0%';
+  }
 }
+
+class OverviewGridTile extends StatelessWidget {
+  const OverviewGridTile({
+    super.key,
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.black.withOpacity(0.04),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8.0),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11,
+                    ),
+              ),
+              const SizedBox(height: 2.0),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.2,
+                      fontSize: 14,
+                    ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+

@@ -23,10 +23,9 @@ class AddUpdatePromotionView extends StatefulWidget {
 class _AddUpdatePromotionViewState extends State<AddUpdatePromotionView> {
   bool get updatingDiscount => widget.promotion != null;
   PromotionType discountType = PromotionType.buyget;
-  // AllocationType allocationType = AllocationType.total;
   PostPromotionReq? updateDiscountReq;
   PostPromotionReq? createDiscountReq;
-  // List<DiscountCondition> conditions = [];
+  String discountDescription = '';
   final discountKey = GlobalKey();
   final generalKey = GlobalKey();
   final configKey = GlobalKey();
@@ -36,9 +35,8 @@ class _AddUpdatePromotionViewState extends State<AddUpdatePromotionView> {
   @override
   void initState() {
     if (updatingDiscount) {
-      // discountType = widget.promotion!.rule!.type;
-      // allocationType =
-      //     widget.promotion!.rule?.allocation ?? AllocationType.total;
+      discountType = widget.promotion!.type ?? PromotionType.standard;
+      discountDescription = widget.promotion!.campaign?.description ?? '';
     }
     super.initState();
   }
@@ -112,16 +110,13 @@ class _AddUpdatePromotionViewState extends State<AddUpdatePromotionView> {
                       if (!updatingDiscount)
                         Column(
                           children: [
-                            // DiscountTypeExpansionTile(
-                            //   key: discountKey,
-                            //   discountType: discountType,
-                            //   allocationType: allocationType,
-                            //   onTypeChange: (type) {
-                            //     setState(() => discountType = type);
-                            //   },
-                            //   onAllocationChange: (type) {
-                            //   },
-                            // ),
+                            PromotionTypeExpansionTile(
+                              key: discountKey,
+                              discountType: discountType,
+                              onTypeChange: (type) {
+                                setState(() => discountType = type);
+                              },
+                            ),
                             space,
                           ],
                         ),
@@ -130,7 +125,36 @@ class _AddUpdatePromotionViewState extends State<AddUpdatePromotionView> {
                           child: GeneralExpansionTile(
                             key: generalKey,
                             discountType: discountType,
-                            onSaved: (regions, code, description, value) {},
+                            onSaved: (regions, code, description, value) {
+                              discountDescription = description;
+                              final regionIds = regions.map((e) => e.id).toList();
+                              final appMethod = ApplicationMethod(
+                                id: updatingDiscount ? widget.promotion!.applicationMethod?.id ?? 'app_method' : 'app_method',
+                                type: discountType == PromotionType.standard ? 'percentage' : 'fixed',
+                                value: value ?? 0,
+                                allocation: 'across',
+                              );
+                              if (updatingDiscount) {
+                                updateDiscountReq = PostPromotionReq(
+                                  code: code,
+                                  type: discountType == PromotionType.standard ? 'standard' : 'buyget',
+                                  applicationMethod: appMethod,
+                                  additionalData: {
+                                    'regions': regionIds,
+                                  },
+                                );
+                              } else {
+                                createDiscountReq = PostPromotionReq(
+                                  code: code,
+                                  type: discountType == PromotionType.standard ? 'standard' : 'buyget',
+                                  applicationMethod: appMethod,
+                                  additionalData: {
+                                    'regions': regionIds,
+                                    'is_dynamic': false,
+                                  },
+                                );
+                              }
+                            },
                             discount: widget.promotion,
                           )),
                       space,
@@ -138,7 +162,39 @@ class _AddUpdatePromotionViewState extends State<AddUpdatePromotionView> {
                           key: configFormKey,
                           child: ConfigurationExpansionTile(
                             key: configKey,
-                            onSaved: (startDate, endDate, limit) {},
+                            onSaved: (startDate, endDate, limit) {
+                              if (updatingDiscount) {
+                                updateDiscountReq = updateDiscountReq?.copyWith(
+                                  campaign: Campaign(
+                                    id: 'camp_temp',
+                                    name: 'Campaign',
+                                    campaignIdentifier: 'camp_id_temp',
+                                    startsAt: startDate,
+                                    endsAt: endDate,
+                                    description: discountDescription,
+                                  ),
+                                  additionalData: {
+                                    ...?updateDiscountReq?.additionalData,
+                                    if (limit != null) 'usage_limit': limit,
+                                  },
+                                );
+                              } else {
+                                createDiscountReq = createDiscountReq?.copyWith(
+                                  campaign: Campaign(
+                                    id: 'camp_temp',
+                                    name: 'Campaign',
+                                    campaignIdentifier: 'camp_id_temp',
+                                    startsAt: startDate,
+                                    endsAt: endDate,
+                                    description: discountDescription,
+                                  ),
+                                  additionalData: {
+                                    ...?createDiscountReq?.additionalData,
+                                    if (limit != null) 'usage_limit': limit,
+                                  },
+                                );
+                              }
+                            },
                             discount: widget.promotion,
                           )),
                       space,

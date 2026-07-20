@@ -46,5 +46,13 @@ extension OrderExtension on Order {
   Address? get shippingAddress => metadata?['shipping_address'] != null 
       ? Address.fromJson(Map<String, dynamic>.from(metadata?['shipping_address'] as Map)) 
       : null;
+  String get customerName {
+    final address = metadata?['shipping_address'] as Map?;
+    if (address == null) return 'N/A';
+    final firstName = address['first_name'] as String?;
+    final lastName = address['last_name'] as String?;
+    if (firstName == null && lastName == null) return 'N/A';
+    return '${firstName ?? ''} ${lastName ?? ''}'.trim();
+  }
 }
 

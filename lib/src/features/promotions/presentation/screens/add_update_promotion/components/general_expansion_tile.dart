@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:medusa_admin/src/core/extensions/context_extension.dart';
 import 'package:medusa_admin/src/core/extensions/num_extension.dart';
 import 'package:medusa_admin/src/core/extensions/string_extension.dart';
@@ -50,25 +51,39 @@ class _GeneralExpansionTileState extends State<GeneralExpansionTile> {
 
   @override
   void initState() {
-    // if (widget.discount != null) {
-    //   selectedRegions = widget.discount!.regions;
-    //   regionCtrl.text = selectedRegions
-    //       .map((e) => e.name)
-    //       .toList()
-    //       .toString()
-    //       .replaceAll('[', '')
-    //       .replaceAll(']', '');
-    //   if (discountType == PromotionType.standard) {
-    //     // widget.discount?.rule;
-    //     amountCtrl.text = widget.discount!.rule?.value
-    //             .formatAsPrice(selectedRegions.firstOrNull?.currencyCode, includeSymbol: false) ??
-    //         '';
-    //   } else {
-    //     percentageCtrl.text = widget.discount!.rule?.value.toString() ?? '';
-    //   }
-    //   descriptionCtrl.text = widget.discount!.rule?.description ?? '';
-    //   codeCtrl.text = widget.discount!.code ?? '';
-    // }
+    if (widget.discount != null) {
+      final regionsRule = widget.discount!.rules
+          ?.where((e) => e.attribute == 'regions')
+          .firstOrNull;
+      if (regionsRule != null) {
+        selectedRegions = regionsRule.values.map((v) {
+          if (v.label != null && v.label!.isNotEmpty) {
+            try {
+              return Region.fromJson(jsonDecode(v.label!) as Map<String, dynamic>);
+            } catch (_) {}
+          }
+          return null;
+        }).whereType<Region>().toList();
+      }
+      regionCtrl.text = selectedRegions
+          .map((e) => e.name)
+          .toList()
+          .toString()
+          .replaceAll('[', '')
+          .replaceAll(']', '');
+      final appMethod = widget.discount!.applicationMethod;
+      if (appMethod != null) {
+        if (discountType == PromotionType.buyget) {
+          amountCtrl.text = appMethod.value
+                  .formatAsPrice(selectedRegions.firstOrNull?.currencyCode, includeSymbol: false) ??
+              '';
+        } else {
+          percentageCtrl.text = appMethod.value.toString();
+        }
+      }
+      descriptionCtrl.text = widget.discount!.campaign?.description ?? '';
+      codeCtrl.text = widget.discount!.code ?? '';
+    }
     super.initState();
   }
 
@@ -184,7 +199,7 @@ class _GeneralExpansionTileState extends State<GeneralExpansionTile> {
           ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
-            child: discountType == PromotionType.buyget
+            child: discountType == PromotionType.standard
                 ? LabeledNumericTextField(
                     key: const Key('percentage'),
                     label: 'Percentage',

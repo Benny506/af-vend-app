@@ -162,11 +162,11 @@ class _PromotionsViewState extends State<PromotionsView> {
             FloatingActionButton.extended(
               heroTag: UniqueKey(),
               onPressed: () async {
-                // final result =
-                //     await context.pushRoute(AddUpdatePromotionRoute());
-                // if (result is Promotion) {
-                //   pagingController.refresh();
-                // }
+                final result =
+                    await context.pushRoute(AddUpdatePromotionRoute());
+                if (result is Promotion) {
+                  pagingController.refresh();
+                }
               },
               label: const Text('New Discount'),
               icon: const Icon(Icons.add),
@@ -205,6 +205,7 @@ class _PromotionsViewState extends State<PromotionsView> {
                             RefreshStatus.refreshing;
                       }
                     },
+                    onEdit: () => pagingController.refresh(),
                     onDelete: loading
                         ? null
                         : () async {
@@ -217,8 +218,12 @@ class _PromotionsViewState extends State<PromotionsView> {
                             promotionCrudBloc.add(PromotionCrudEvent.update(
                                 discount.id,
                                 PostPromotionReq(
-                                    // isDisabled: !discount.isDisabled,
-                                    )));
+                                  isAutomatic: discount.isAutomatic,
+                                  code: discount.code,
+                                  additionalData: {
+                                    'is_disabled': discount.status != PromotionStatus.inactive,
+                                  },
+                                )));
                           },
                   ),
                 ),

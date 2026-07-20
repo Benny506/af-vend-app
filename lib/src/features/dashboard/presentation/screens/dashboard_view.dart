@@ -56,6 +56,8 @@ class DashboardView extends StatelessWidget {
               PricingRoute(),
               StoreSettingsRoute(),
               AppSettingsRoute(),
+              PickupRequestsRoute(),
+              DeliveriesRoute(),
             ],
             transitionBuilder: (context, child, animation) => child,
             builder: (context, child) => child,
