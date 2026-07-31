@@ -61,13 +61,17 @@ class _PromotionDetailsViewState extends State<PromotionDetailsView> {
                   padding: const EdgeInsets.fromLTRB(
                       12.0, 8.0, 12.0, kToolbarHeight * 2),
                   children: [
-                    // DiscountDetailsCard(promotion, toggle: () {
-                    //   PromotionCrudBloc.add(PromotionCrudEvent.update(
-                    //       promotion.id,
-                    //       PostPromotionReq(
-                    //         // isDisabled: !promotion.isDisabled,
-                    //       )));
-                    // }),
+                    DiscountDetailsCard(promotion, toggle: () {
+                      promotionCrudBloc.add(PromotionCrudEvent.update(
+                          promotion.id,
+                          PostPromotionReq(
+                            isAutomatic: promotion.isAutomatic,
+                            code: promotion.code,
+                            additionalData: {
+                              'is_disabled': promotion.status != PromotionStatus.inactive,
+                            },
+                          )));
+                    }),
                     space,
                     ConfigurationsCard(promotion),
                     space,

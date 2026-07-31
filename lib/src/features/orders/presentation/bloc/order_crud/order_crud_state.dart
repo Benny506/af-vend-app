@@ -7,5 +7,7 @@ class OrderCrudState with _$OrderCrudState {
   const factory OrderCrudState.order(Order order) = _Order;
   const factory OrderCrudState.fulfillment(Fulfillment fulfillment) =
       _Fulfillment;
+  const factory OrderCrudState.paymentCaptured() = _PaymentCaptured;
+  const factory OrderCrudState.shipmentCreated() = _ShipmentCreated;
   const factory OrderCrudState.error(MedusaError failure) = _Error;
 }

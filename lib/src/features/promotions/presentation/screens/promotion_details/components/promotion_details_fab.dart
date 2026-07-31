@@ -1,11 +1,14 @@
 import 'package:adaptive_dialog/adaptive_dialog.dart';
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:medusa_admin/src/core/constants/colors.dart';
 import 'package:medusa_admin/src/core/extensions/text_style_extension.dart';
 import 'package:medusa_admin/src/core/utils/medusa_icons_icons.dart';
+import 'package:medusa_admin/src/core/routing/app_router.dart';
 import 'package:medusa_admin/src/features/promotions/presentation/bloc/promotion_crud/promotion_crud_bloc.dart';
+import 'package:medusa_admin_dart_client/medusa_admin_dart_client_v2.dart';
 
 class PromotionDetailsFab extends StatelessWidget {
   const PromotionDetailsFab(this.promotionCrudBloc,
@@ -16,6 +19,7 @@ class PromotionDetailsFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final smallTextStyle = context.bodySmall;
+    
     onDeleteTap(String id) async {
       await showOkCancelAlertDialog(
               context: context,
@@ -31,15 +35,15 @@ class PromotionDetailsFab extends StatelessWidget {
       });
     }
 
-    // onUpdateTap(Promotion discount) async {
-    //   await context
-    //       .pushRoute(AddUpdateDiscountRoute(discount: discount))
-    //       .then((value) async {
-    //     if (value is bool && value == true) {
-    //       PromotionCrudBloc.add(PromotionCrudEvent.load(discount.id));
-    //     }
-    //   });
-    // }
+    onUpdateTap(Promotion discount) async {
+      await context
+          .pushRoute(AddUpdatePromotionRoute(promotion: discount))
+          .then((value) async {
+        if (value is Promotion) {
+          promotionCrudBloc.add(PromotionCrudEvent.load(discount.id));
+        }
+      });
+    }
 
     if (expandableStyle) {
       const emptySpeedDial = SpeedDial(
@@ -73,7 +77,7 @@ class PromotionDetailsFab extends StatelessWidget {
                         child: const Icon(MedusaIcons.pencil_square_solid),
                         label: 'Update Discount',
                         labelStyle: smallTextStyle,
-                        // onTap: () async => await onUpdateTap(_.discount),
+                        onTap: () async => await onUpdateTap(promotion),
                         onLongPress: () {},
                       ),
                     ],
@@ -101,8 +105,7 @@ class PromotionDetailsFab extends StatelessWidget {
                         heroTag: null,
                         backgroundColor: ColorManager.primary,
                         foregroundColor: Colors.white,
-                        // onPressed: () async => await onUpdateTap(_.discount),
-                        onPressed: null,
+                        onPressed: () async => await onUpdateTap(promotion),
                         child: const Icon(MedusaIcons.pencil_square_solid)),
                   ],
                 ),

@@ -34,33 +34,25 @@ Future<void> main() async {
   //   return true;
   // };
 
-  //* initialize Supabase using stored credentials if available
+  //* initialize Supabase using stored credentials if available, else use defaults
   final secureStorage = const FlutterSecureStorage();
-  final supabaseUrl = await secureStorage.read(key: AppConstants.supabaseUrlKey);
-  final supabaseAnonKey = await secureStorage.read(key: AppConstants.supabaseAnonKey);
+  final storedUrl = await secureStorage.read(key: AppConstants.supabaseUrlKey);
+  final storedAnonKey = await secureStorage.read(key: AppConstants.supabaseAnonKey);
 
-  if (supabaseUrl != null &&
-      supabaseAnonKey != null &&
-      supabaseUrl.isNotEmpty &&
-      supabaseAnonKey.isNotEmpty) {
-    try {
-      await Supabase.initialize(
-        url: supabaseUrl,
-        anonKey: supabaseAnonKey,
-      );
-    } catch (_) {
-      await Supabase.initialize(
-        url: 'https://placeholder.supabase.co',
-        anonKey: 'placeholder',
-      );
-    }
-  } else {
-    try {
-      await Supabase.initialize(
-        url: 'https://placeholder.supabase.co',
-        anonKey: 'placeholder',
-      );
-    } catch (_) {}
+  final supabaseUrl = (storedUrl != null && storedUrl.isNotEmpty)
+      ? storedUrl
+      : AppConstants.defaultSupabaseUrl;
+  final supabaseAnonKey = (storedAnonKey != null && storedAnonKey.isNotEmpty)
+      ? storedAnonKey
+      : AppConstants.defaultSupabaseAnonKey;
+
+  try {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    );
+  } catch (_) {
+    // Already initialized — safe to ignore on hot restart.
   }
 
   //* inject dependencies

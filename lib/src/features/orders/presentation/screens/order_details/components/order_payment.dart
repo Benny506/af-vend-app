@@ -12,9 +12,10 @@ import 'package:medusa_admin_dart_client/medusa_admin_dart_client_v2.dart';
 import 'package:flex_expansion_tile/flex_expansion_tile.dart';
 
 class OrderPayment extends StatelessWidget {
-  const OrderPayment(this.order, {super.key, this.onExpansionChanged});
+  const OrderPayment(this.order, {super.key, this.onExpansionChanged, this.onCapturePressed});
   final Order order;
   final void Function(bool)? onExpansionChanged;
+  final void Function(String)? onCapturePressed;
   @override
   Widget build(BuildContext context) {
     final refunded = order.refundedTotal > 0;
@@ -25,25 +26,15 @@ class OrderPayment extends StatelessWidget {
     const manatee = ColorManager.manatee;
     final largeTextStyle = context.bodyLarge;
     Widget? getButton() {
-      switch (order.paymentStatus) {
-        case PaymentStatus.refunded:
-          return TextButton(
-            onPressed: () {},
-            child: Text(tr.templatesCapturePayment),
-          );
-        case PaymentStatus.notPaid:
-        case PaymentStatus.awaiting:
-        case PaymentStatus.partiallyRefunded:
-        case PaymentStatus.captured:
-        case PaymentStatus.canceled:
-          break;
-        case PaymentStatus.requiresAction:
-          break;
-        case PaymentStatus.authorized:
-        case PaymentStatus.partiallyAuthorized:
-        case PaymentStatus.partiallyCaptured:
-
-        case null:
+      final pId = order.paymentId;
+      if (pId != null &&
+          (order.paymentStatus == PaymentStatus.authorized ||
+              order.paymentStatus == PaymentStatus.requiresAction ||
+              order.paymentStatus == PaymentStatus.awaiting)) {
+        return TextButton(
+          onPressed: () => onCapturePressed?.call(pId),
+          child: Text(tr.templatesCapturePayment),
+        );
       }
       return null;
     }

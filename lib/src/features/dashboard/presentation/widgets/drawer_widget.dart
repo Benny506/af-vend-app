@@ -46,6 +46,8 @@ class _AppDrawerState extends State<AppDrawer> {
       if (route is PricingRoute) return 12;
       if (route is StoreSettingsRoute) return 13;
       if (route is AppSettingsRoute) return 14;
+      if (route is PickupRequestsRoute) return 15;
+      if (route is DeliveriesRoute) return 16;
       return 0;
     }
 
@@ -64,26 +66,11 @@ class _AppDrawerState extends State<AppDrawer> {
         label: 'Orders',
         route: const OrdersRoute(),
       ),
-      DrawerDestination(
-        icon: const Icon(CupertinoIcons.cart_badge_plus),
-        label: 'Draft Orders',
-        route: const DraftOrdersRoute(),
-      ),
       const DrawerDestination.divider(),
       DrawerDestination(
         icon: const Icon(MedusaIcons.tag),
         label: 'Products',
         route: const ProductsRoute(),
-      ),
-      DrawerDestination(
-        icon: const Icon(Icons.collections_bookmark),
-        label: 'Collections',
-        route: const CollectionsRoute(),
-      ),
-      DrawerDestination(
-        icon: const Icon(MedusaIcons.tag),
-        label: 'Categories',
-        route: const CategoriesRoute(),
       ),
       const DrawerDestination.divider(),
       DrawerDestination(
@@ -91,16 +78,16 @@ class _AppDrawerState extends State<AppDrawer> {
         label: 'Promotions',
         route: const PromotionsRoute(),
       ),
-      DrawerDestination(
-        icon: const Icon(Icons.campaign),
-        label: 'Campaigns',
-        route: const CampaignsRoute(),
-      ),
       const DrawerDestination.divider(),
       DrawerDestination(
-        icon: const Icon(MedusaIcons.currency_dollar),
-        label: 'Pricing',
-        route: const PricingRoute(),
+        icon: const Icon(CupertinoIcons.cube_box),
+        label: 'Pickup Requests',
+        route: const PickupRequestsRoute(),
+      ),
+      DrawerDestination(
+        icon: const Icon(Icons.local_shipping),
+        label: 'Deliveries',
+        route: const DeliveriesRoute(),
       ),
       const DrawerDestination.divider(),
       DrawerDestination(

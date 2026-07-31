@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:auto_route/auto_route.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:medusa_admin/src/core/utils/enums.dart';
 import 'package:medusa_admin/src/features/api_keys/presentation/screens/api_key_details/api_key_details_view.dart';
@@ -100,6 +101,12 @@ import 'package:medusa_admin/src/features/groups/presentation/screens/groups/gro
 import 'package:medusa_admin/src/features/products/presentation/widgets/pick_products_view.dart';
 import 'package:medusa_admin/src/features/search/presentation/screens/search/medusa_search_view.dart';
 import 'package:medusa_admin/src/features/regions/presentation/screens/regions/regions_view.dart';
+import 'package:medusa_admin/src/features/pickup_requests/presentation/screens/pickup_requests_view.dart';
+import 'package:medusa_admin/src/features/pickup_requests/presentation/screens/pickup_requests_details_view.dart';
+import 'package:medusa_admin/src/features/pickup_requests/presentation/screens/add_update_pickup_request_view.dart';
+import 'package:medusa_admin/src/features/deliveries/presentation/screens/deliveries_view.dart';
+import 'package:medusa_admin/src/features/deliveries/presentation/screens/deliveries_details_view.dart';
+import 'package:medusa_admin/src/features/deliveries/presentation/screens/add_update_delivery_view.dart';
 
 part 'app_router.gr.dart';
 
@@ -140,6 +147,8 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: PricingRoute.page),
     AutoRoute(page: StoreSettingsRoute.page),
     AutoRoute(page: AppSettingsRoute.page),
+    AutoRoute(page: PickupRequestsRoute.page),
+    AutoRoute(page: DeliveriesRoute.page),
   ];
 
   @override
@@ -222,6 +231,14 @@ class AppRouter extends RootStackRouter {
         AutoRoute(page: RegionDetailsRoute.page),
         AutoRoute(page: AddUpdateRegionRoute.page),
         // AutoRoute(page: AddUpdateShippingOptionRoute.page),
+
+        // Pickup requests
+        AutoRoute(page: PickupRequestsDetailsRoute.page),
+        AutoRoute(page: AddUpdatePickupRequestRoute.page),
+
+        // Deliveries
+        AutoRoute(page: DeliveriesDetailsRoute.page),
+        AutoRoute(page: AddUpdateDeliveryRoute.page),
 
         AutoRoute(page: StoreDetailsRoute.page),
 

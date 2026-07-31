@@ -18,55 +18,13 @@ class MedusaV1ResponseTransformer extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // Clean fields and expand query parameters for V1 compatibility, mapping V2 * fields
-    if (options.queryParameters.containsKey('fields')) {
-      final fieldsVal = options.queryParameters['fields'];
-      if (fieldsVal is String) {
-        final fieldParts = fieldsVal.split(',');
-        final v2Relations = fieldParts
-            .where((f) => f.startsWith('*'))
-            .map((f) => f.substring(1))
-            .toList();
-        final v1Fields = fieldParts
-            .where((f) => !f.startsWith('*') && !f.contains('.'))
-            .join(',');
-
-        if (v2Relations.isNotEmpty) {
-          final existingExpand = options.queryParameters['expand']?.toString();
-          final List<String> expandParts = existingExpand != null
-              ? existingExpand.split(',').where((e) => e.isNotEmpty).toList()
-              : [];
-          for (final rel in v2Relations) {
-            if (!expandParts.contains(rel)) {
-              expandParts.add(rel);
-            }
-          }
-          options.queryParameters['expand'] = expandParts.join(',');
-        }
-
-        if (v1Fields.isNotEmpty) {
-          options.queryParameters['fields'] = v1Fields;
-        } else {
-          options.queryParameters.remove('fields');
-        }
-      }
-    }
-
-    if (options.queryParameters.containsKey('expand')) {
-      final expandVal = options.queryParameters['expand'];
-      if (expandVal is String) {
-        final v1Expand = expandVal.split(',').where((e) => !e.contains('.')).join(',');
-        if (v1Expand.isNotEmpty) {
-          options.queryParameters['expand'] = v1Expand;
-        } else {
-          options.queryParameters.remove('expand');
-        }
-      }
-    }
-
     final isOrderRetrieve = options.path.startsWith('/admin/orders/') && 
         !options.path.contains('/deliveries') && 
         options.method == 'GET';
+    
+    final isProductRetrieve = options.path.startsWith('/admin/products/') &&
+        options.method == 'GET';
+
     if (isOrderRetrieve) {
       final fieldsVal = options.queryParameters['fields'];
       if (fieldsVal is String) {
@@ -93,18 +51,15 @@ class MedusaV1ResponseTransformer extends Interceptor {
             : [];
         for (final part in fieldParts) {
           final cleanPart = part.replaceAll('+', '').replaceAll('*', '').trim();
-          if (v1Relations.contains(cleanPart) && !expandParts.contains(cleanPart)) {
-            expandParts.add(cleanPart);
+          final baseRelation = cleanPart.split('.').first;
+          if (v1Relations.contains(baseRelation) && !expandParts.contains(baseRelation)) {
+            expandParts.add(baseRelation);
           }
         }
         options.queryParameters['expand'] = expandParts.join(',');
         options.queryParameters.remove('fields');
       }
-    }
-
-    final isProductRetrieve = options.path.startsWith('/admin/products/') &&
-        options.method == 'GET';
-    if (isProductRetrieve) {
+    } else if (isProductRetrieve) {
       final fieldsVal = options.queryParameters['fields'];
       if (fieldsVal is String) {
         final List<String> v1Relations = [
@@ -123,12 +78,59 @@ class MedusaV1ResponseTransformer extends Interceptor {
             : [];
         for (final part in fieldParts) {
           final cleanPart = part.replaceAll('+', '').replaceAll('*', '').trim();
-          if (v1Relations.contains(cleanPart) && !expandParts.contains(cleanPart)) {
-            expandParts.add(cleanPart);
+          final baseRelation = cleanPart.split('.').first;
+          if (v1Relations.contains(baseRelation) && !expandParts.contains(baseRelation)) {
+            expandParts.add(baseRelation);
           }
         }
         options.queryParameters['expand'] = expandParts.join(',');
         options.queryParameters.remove('fields');
+      }
+    } else {
+      // Clean fields and expand query parameters for V1 compatibility, mapping V2 * fields
+      if (options.queryParameters.containsKey('fields')) {
+        final fieldsVal = options.queryParameters['fields'];
+        if (fieldsVal is String) {
+          final fieldParts = fieldsVal.split(',');
+          final v2Relations = fieldParts
+              .where((f) => f.startsWith('*'))
+              .map((f) => f.substring(1))
+              .toList();
+          final v1Fields = fieldParts
+              .where((f) => !f.startsWith('*') && !f.contains('.'))
+              .join(',');
+
+          if (v2Relations.isNotEmpty) {
+            final existingExpand = options.queryParameters['expand']?.toString();
+            final List<String> expandParts = existingExpand != null
+                ? existingExpand.split(',').where((e) => e.isNotEmpty).toList()
+                : [];
+            for (final rel in v2Relations) {
+              if (!expandParts.contains(rel)) {
+                expandParts.add(rel);
+              }
+            }
+            options.queryParameters['expand'] = expandParts.join(',');
+          }
+
+          if (v1Fields.isNotEmpty) {
+            options.queryParameters['fields'] = v1Fields;
+          } else {
+            options.queryParameters.remove('fields');
+          }
+        }
+      }
+
+      if (options.queryParameters.containsKey('expand')) {
+        final expandVal = options.queryParameters['expand'];
+        if (expandVal is String) {
+          final v1Expand = expandVal.split(',').where((e) => !e.contains('.')).join(',');
+          if (v1Expand.isNotEmpty) {
+            options.queryParameters['expand'] = v1Expand;
+          } else {
+            options.queryParameters.remove('expand');
+          }
+        }
       }
     }
 
@@ -150,6 +152,58 @@ class MedusaV1ResponseTransformer extends Interceptor {
     // Rewrites for V2 Promotions -> V1 Discounts
     if (options.path.startsWith('/admin/promotions')) {
       options.path = options.path.replaceFirst('/admin/promotions', '/admin/discounts');
+    }
+
+    // Request body transformer: V2 Promotions -> V1 Discounts
+    if (options.path.startsWith('/admin/discounts')) {
+      final data = options.data;
+      if (data is Map<String, dynamic>) {
+        final v1Payload = <String, dynamic>{};
+        if (data.containsKey('code')) {
+          v1Payload['code'] = data['code'];
+        }
+        
+        final appMethod = data['application_method'];
+        if (appMethod is Map<String, dynamic>) {
+          final ruleMap = <String, dynamic>{};
+          ruleMap['type'] = appMethod['type'] ?? 'percentage';
+          ruleMap['value'] = appMethod['value'] ?? 0;
+          ruleMap['allocation'] = appMethod['allocation'] ?? 'total';
+          ruleMap['description'] = appMethod['description'] ?? '';
+          v1Payload['rule'] = ruleMap;
+        }
+
+        final campaign = data['campaign'];
+        if (campaign is Map<String, dynamic>) {
+          if (campaign.containsKey('starts_at')) v1Payload['starts_at'] = campaign['starts_at'];
+          if (campaign.containsKey('ends_at')) v1Payload['ends_at'] = campaign['ends_at'];
+        }
+        
+        final addData = data['additional_data'];
+        if (addData is Map<String, dynamic>) {
+          if (addData.containsKey('regions')) v1Payload['regions'] = addData['regions'];
+          if (addData.containsKey('is_dynamic')) v1Payload['is_dynamic'] = addData['is_dynamic'];
+          if (addData.containsKey('usage_limit')) v1Payload['usage_limit'] = addData['usage_limit'];
+          if (addData.containsKey('is_disabled')) v1Payload['is_disabled'] = addData['is_disabled'];
+        }
+
+        v1Payload.putIfAbsent('is_dynamic', () => false);
+        v1Payload.putIfAbsent('regions', () => <String>[]);
+        
+        options.data = v1Payload;
+      }
+    }
+
+    // Request body transformer: V2 Regions -> V1 Regions
+    if (options.path == '/admin/regions' || (options.path.startsWith('/admin/regions/') && options.method == 'POST')) {
+      final data = options.data;
+      if (data is Map<String, dynamic>) {
+        final metadata = data['metadata'];
+        if (metadata is Map<String, dynamic> && metadata.containsKey('fulfillment_providers')) {
+          data['fulfillment_providers'] = metadata['fulfillment_providers'];
+          metadata.remove('fulfillment_providers');
+        }
+      }
     }
 
     // Mocks for endpoints V1 doesn't have
@@ -543,6 +597,19 @@ class MedusaV1ResponseTransformer extends Interceptor {
         }
       }
 
+      // If the response map has a list field but is missing pagination metadata, supply defaults.
+      data.putIfAbsent('limit', () => 50);
+      data.putIfAbsent('offset', () => 0);
+      if (!data.containsKey('count')) {
+        for (final val in data.values) {
+          if (val is List) {
+            data['count'] = val.length;
+            break;
+          }
+        }
+      }
+      data.putIfAbsent('count', () => 0);
+
       // Wrap/Rename V1 discounts -> V2 promotions key
       if (path.contains('/admin/promotions') || path.contains('/admin/discounts')) {
         final discounts = data['discounts'];
@@ -836,6 +903,22 @@ class MedusaV1ResponseTransformer extends Interceptor {
       map.putIfAbsent('tax_rates', () => <dynamic>[]);
       map.putIfAbsent('payment_providers', () => <dynamic>[]);
       map.putIfAbsent('fulfillment_providers', () => <dynamic>[]);
+
+      // Move V1 fields to metadata to expose them to Dart
+      final metadataMap = Map<String, dynamic>.from(map['metadata'] ?? <String, dynamic>{});
+      if (map.containsKey('payment_providers')) {
+        metadataMap['payment_providers'] = map['payment_providers'];
+      }
+      if (map.containsKey('fulfillment_providers')) {
+        metadataMap['fulfillment_providers'] = map['fulfillment_providers'];
+      }
+      if (map.containsKey('tax_rate')) {
+        metadataMap['tax_rate'] = map['tax_rate'];
+      }
+      if (map.containsKey('tax_rates')) {
+        metadataMap['tax_rates'] = map['tax_rates'];
+      }
+      map['metadata'] = metadataMap;
     }
 
     // ── 9. FulfillmentLabel ─────────────────────────────────────────────────
@@ -876,13 +959,22 @@ class MedusaV1ResponseTransformer extends Interceptor {
         (map.containsKey('price_type') &&
             (map.containsKey('amount') || map.containsKey('requirements')));
     if (isShippingOption) {
+      final soId = map['id'] ?? 'so_unknown';
       if (map.containsKey('amount') && map['amount'] != null && !map.containsKey('prices')) {
         final regionMap = map['region'];
         final String currencyCode = (regionMap is Map) ? (regionMap['currency_code'] ?? 'usd') : 'usd';
         map['prices'] = [
           {
+            'id': 'sop_${soId}_$currencyCode',
+            'title': 'Price',
             'amount': map['amount'],
             'currency_code': currencyCode,
+            'price_rules': <dynamic>[],
+            'rules_count': 0,
+            'raw_amount': {'amount': map['amount']},
+            'min_quantity': 0,
+            'max_quantity': 0,
+            'price_set_id': 'pset_$soId',
           }
         ];
       }
@@ -892,7 +984,10 @@ class MedusaV1ResponseTransformer extends Interceptor {
           if (req is Map<String, dynamic>) {
             final typeStr = req['type']?.toString();
             if (typeStr != null) {
+              final reqId = req['id'] ?? 'req_${req['type']}';
               rulesList.add({
+                'id': reqId,
+                'shipping_option_id': soId,
                 'attribute': typeStr,
                 'value': req['amount']?.toString() ?? '0',
                 'operator': 'eq',
@@ -925,6 +1020,55 @@ class MedusaV1ResponseTransformer extends Interceptor {
           'description': rule['description'] ?? '',
         };
       }
+
+      // Preserve V1 regions list inside standard rules
+      if (map.containsKey('regions') && map['regions'] is List) {
+        final rulesList = List<dynamic>.from(map['rules'] ?? <dynamic>[]);
+        final regionsList = map['regions'] as List;
+        rulesList.add({
+          'id': 'rule_regions_${map['id']}',
+          'attribute': 'regions',
+          'operator': 'eq',
+          'values': regionsList.map((reg) {
+            if (reg is Map) {
+              return {
+                'id': reg['id'],
+                'value': reg['id']?.toString() ?? '',
+                'label': jsonEncode(reg),
+              };
+            }
+            return {
+              'id': reg.toString(),
+              'value': reg.toString(),
+              'label': jsonEncode({'id': reg.toString(), 'name': reg.toString()}),
+            };
+          }).toList(),
+        });
+        map['rules'] = rulesList;
+      }
+
+      // Map description and dates into campaign
+      if (!map.containsKey('campaign') || map['campaign'] == null) {
+        map['campaign'] = {
+          'id': 'camp_${map['id']}',
+          'name': 'Campaign',
+          'campaign_identifier': 'camp_id_${map['id']}',
+          'description': rule is Map ? (rule['description'] ?? '') : '',
+          'starts_at': map['starts_at'],
+          'ends_at': map['ends_at'],
+        };
+      }
+    }
+
+    // ── 14. Country ─────────────────────────────────────────────────────────
+    final isCountry = map.containsKey('iso_2') && map.containsKey('iso_3');
+    if (isCountry) {
+      if (map.containsKey('num_code') && map['num_code'] != null) {
+        map['num_code'] = map['num_code'].toString();
+      } else {
+        map['num_code'] = '';
+      }
+      map.putIfAbsent('display_name', () => map['name'] ?? '');
     }
   }
 

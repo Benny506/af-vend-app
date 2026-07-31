@@ -21,15 +21,24 @@ class OrderCreateFulfillmentView extends StatefulWidget {
 class _OrderCreateFulfillmentViewState
     extends State<OrderCreateFulfillmentView> {
   Map<String, int> lineItemCount = {};
-  List<LineItem> items = [];
+  List<OrderLineItem> items = [];
   @override
   void initState() {
-    // for (var e in widget.order.items) {
-    //   if ((e.quantity - (e.fulfilledQuantity)) != 0) {
-    //     lineItemCount.addAll({e.id: e.quantity});
-    //     items.add(e);
-    //   }
-    // }
+    final orderItems = widget.order.items ?? [];
+    for (var e in orderItems) {
+      if (e.id != null) {
+        final totalQty = e.quantity?.toInt() ?? 0;
+        int fulfilledQty = 0;
+        if (e.detail is Map) {
+          fulfilledQty = (e.detail['fulfilled_quantity'] as num?)?.toInt() ?? 0;
+        }
+        final remaining = totalQty - fulfilledQty;
+        if (remaining > 0) {
+          lineItemCount.addAll({e.id!: remaining});
+          items.add(e);
+        }
+      }
+    }
     super.initState();
   }
 
@@ -49,16 +58,18 @@ class _OrderCreateFulfillmentViewState
           TextButton(
               onPressed: lineItemCount.values.toList().sum != 0
                   ? () {
-                      List<LineItem> lineItems = [];
+                      List<OrderLineItem> lineItems = [];
                       lineItemCount.forEach((key, value) {
                         if (value != 0) {
-                          // lineItems.add(LineItem(id: key, quantity: value));
+                          final original = items.firstWhere((e) => e.id == key);
+                          lineItems.add(original.copyWith(quantity: value));
                         }
                       });
                       context.maybePop(lineItems);
                     }
                   : null,
-              child: const Text('Create'))
+              child: const Text('Create'),
+          ),
         ],
       ),
       body: SafeArea(
@@ -97,7 +108,7 @@ class _OrderCreateFulfillmentViewState
                               width: 50,
                               child: CachedNetworkImage(
                                   key: ValueKey(item.thumbnail),
-                                  imageUrl: item.thumbnail),
+                                  imageUrl: item.thumbnail ?? ''),
                             ),
                             Flexible(
                               child: Column(
@@ -123,28 +134,28 @@ class _OrderCreateFulfillmentViewState
                                 const BorderRadius.all(Radius.circular(12.0))),
                         child: Row(
                           children: [
-                            Text(
-                                '${lineItemCount[item.id]!.toString()} / ${item.quantity}'),
+                             Text(
+                                '${lineItemCount[item.id!]!.toString()} / ${item.quantity}'),
                             IconButton(
                               onPressed: () {
-                                if (lineItemCount[item.id] == 0) {
+                                if (lineItemCount[item.id!] == 0) {
                                   return;
                                 }
                                 setState(() {
-                                  lineItemCount[item.id] =
-                                      lineItemCount[item.id]! - 1;
+                                  lineItemCount[item.id!] =
+                                      lineItemCount[item.id!]! - 1;
                                 });
                               },
                               icon: const Icon(CupertinoIcons.minus),
                             ),
                             IconButton(
                               onPressed: () {
-                                if (lineItemCount[item.id] == item.quantity) {
+                                if (lineItemCount[item.id!] == item.quantity) {
                                   return;
                                 }
                                 setState(() {
-                                  lineItemCount[item.id] =
-                                      lineItemCount[item.id]! + 1;
+                                  lineItemCount[item.id!] =
+                                      lineItemCount[item.id!]! + 1;
                                 });
                               },
                               icon: const Icon(CupertinoIcons.add),

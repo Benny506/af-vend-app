@@ -7,6 +7,8 @@ import 'package:medusa_admin/src/features/orders/presentation/bloc/order_crud/or
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'components/index.dart';
 import 'package:medusa_admin/src/core/extensions/context_extension.dart';
+import 'package:medusa_admin/src/core/utils/easy_loading.dart';
+import 'package:medusa_admin/src/core/extensions/snack_bar_extension.dart';
 
 @RoutePage()
 class OrderDetailsView extends StatefulWidget {
@@ -80,8 +82,25 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           order: (order) {
             refreshController.refreshCompleted();
           },
+          fulfillment: (_) {
+            dismissLoading();
+            context.showSnackBar('Fulfillment created successfully');
+            loadOrder();
+          },
+          paymentCaptured: (_) {
+            dismissLoading();
+            context.showSnackBar('Payment captured successfully');
+            loadOrder();
+          },
+          shipmentCreated: (_) {
+            dismissLoading();
+            context.showSnackBar('Shipment created successfully');
+            loadOrder();
+          },
           error: (e) {
             refreshController.refreshFailed();
+            dismissLoading();
+            context.showSnackBar('Error: ${e.failure.message}');
           },
         );
       },
@@ -120,7 +139,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                               okLabel: 'Yes, confirm',
                             ).then((value) async {
                               if (value) {
-                                // await controller.cancelOrder();
+                                orderCrudBloc.add(OrderCrudEvent.cancel(order.id));
                               }
                             });
                             return;
@@ -168,10 +187,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                                   .ensureVisibility();
                             }
                           },
+                          onCapturePressed: (paymentId) {
+                            orderCrudBloc.add(OrderCrudEvent.capturePayment(paymentId));
+                          },
                           key: paymentKey,
                         ),
                         space,
-                        OrderFulfillment(
+                         OrderFulfillment(
                           order,
                           onExpansionChanged: (expanded) async {
                             if (expanded) {
@@ -179,6 +201,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                                   .ensureVisibility();
                             }
                           },
+                          orderCrudBloc: orderCrudBloc,
                           key: fulfillmentKey,
                         ),
                         space,

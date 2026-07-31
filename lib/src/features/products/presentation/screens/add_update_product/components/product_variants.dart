@@ -199,7 +199,7 @@ class ProductVariantCard extends StatelessWidget {
           )),
           Row(
             children: [
-              Text(variant.inventoryQuantity.toString() ?? '',
+              Text(variant.inventoryQuantity?.toString() ?? '',
                   style: mediumTextStyle),
               const SizedBox(width: 10.0),
               if (isVariantCompleted(variant))

@@ -64,7 +64,7 @@ class _CategoriesViewState extends State<CategoriesView> {
             if (isLastPage) {
               pagingController.appendLastPage(state.categories);
             } else {
-              final nextPageKey = pagingController.nextPageKey ?? 0 + state.categories.length;
+              final nextPageKey = (pagingController.nextPageKey ?? 0) + state.categories.length;
               pagingController.appendPage(state.categories, nextPageKey);
             }
             if (refreshController.isRefresh) {
