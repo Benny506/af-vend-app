@@ -232,7 +232,7 @@ class _DeliveriesViewState extends State<DeliveriesView> {
                                 borderRadius: BorderRadius.circular(16.0),
                                 onTap: () async {
                                   final result = await context.pushRoute(
-                                    DeliveriesDetailsRoute(deliveryId: delivery['id'] as String),
+                                    DeliveriesDetailsRoute(deliveryId: delivery['id'].toString()),
                                   );
                                   if (result == true) {
                                     _fetchDeliveries();

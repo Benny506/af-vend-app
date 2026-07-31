@@ -99,13 +99,12 @@ class _CreateCollectionViewState extends State<CreateCollectionView> {
                             context.maybePop();
                             return;
                           }
-                          // update collection
-                          // collectionCrudBloc.add(CollectionCrudEvent.update(
-                          //     widget.collection!.id,
-                          //     CreateCollectionReq(
-                          //       title: titleCtrl.text,
-                          //       handle: handleCtrl.text,
-                          //     )));
+                           collectionCrudBloc.add(CollectionCrudEvent.update(
+                              widget.collection!.id,
+                              UpdateCollectionReq(
+                                title: titleCtrl.text,
+                                handle: handleCtrl.text.isEmpty ? null : handleCtrl.text,
+                              )));
                         }
                       : () async {
                           // create collection

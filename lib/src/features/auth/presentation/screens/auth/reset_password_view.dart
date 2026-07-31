@@ -40,6 +40,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
           },
           success: (_) {
             setLoading(false);
+            context.showSnackBar('Password reset instructions sent to your email.');
             if (mounted) {
               context.maybePop();
             }

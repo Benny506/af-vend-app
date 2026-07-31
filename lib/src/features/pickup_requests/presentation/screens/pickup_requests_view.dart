@@ -234,7 +234,7 @@ class _PickupRequestsViewState extends State<PickupRequestsView> {
                                 borderRadius: BorderRadius.circular(16.0),
                                 onTap: () async {
                                   final result = await context.pushRoute(
-                                    PickupRequestsDetailsRoute(requestId: request['id'] as String),
+                                    PickupRequestsDetailsRoute(requestId: request['id'].toString()),
                                   );
                                   if (result == true) {
                                     _fetchPickupRequests();

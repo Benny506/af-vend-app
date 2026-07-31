@@ -116,13 +116,13 @@ class OrderCrudUseCase {
     }
   }
 
-  Future<Result<Fulfillment, MedusaError>> createFulfillment({
-    required PostFulfillmentsReq payload,
-    Map<String, dynamic>? queryParameters,
+  Future<Result<Order, MedusaError>> createFulfillment({
+    required String orderId,
+    required PostOrdersFulfillmentsReq payload,
   }) async {
     try {
-      final result = await _fulfillmentRepository.create(payload);
-      return Success(result.fulfillment);
+      final result = await _orderRepository.createFulfillment(orderId, payload);
+      return Success(result.order);
     } on DioException catch (e) {
       return Error(MedusaError.fromHttp(
         status: e.response?.statusCode,
@@ -275,27 +275,50 @@ class OrderCrudUseCase {
   //   }
   // }
   //
-  // Future<Result<Order, MedusaError>> captureOrderPayment({
-  //   required String id,
-  // }) async {
-  //   try {
-  //     final response = await _orderRepository.captureOrderPayment(
-  //       id: id,
-  //     );
-  //   } on DioException catch (e) {
-  //     return Error(MedusaError.fromHttp(
-  //       status: e.response?.statusCode,
-  //       body: e.response?.data,
-  //       cause: e,
-  //     ));
-  //   } catch (error, stack) {
-  //     if (kDebugMode) {
-  //       log(error.toString());
-  //       log(stack.toString());
-  //     }
-  //     return Error(MedusaError(code: 'unknown', type: 'unknown', message: error.toString()));
-  //   }
-  // }
+  Future<Result<Order, MedusaError>> createShipment({
+    required String id,
+    required String fulfillmentId,
+  }) async {
+    try {
+      final response = await _orderRepository.createShipment(
+        id,
+        fulfillmentId,
+        const CreateOrderShipmentReq(items: []),
+      );
+      return Success(response.order);
+    } on DioException catch (e) {
+      return Error(MedusaError.fromHttp(
+        status: e.response?.statusCode,
+        body: e.response?.data,
+        cause: e,
+      ));
+    } catch (error, stack) {
+      log(error.toString());
+      log(stack.toString());
+      return Error(MedusaError(
+          code: 'unknown', type: 'unknown', message: error.toString()));
+    }
+  }
+
+  Future<Result<Payment, MedusaError>> capturePayment({
+    required String paymentId,
+  }) async {
+    try {
+      final response = await _medusaAdmin.payments.capture(id: paymentId);
+      return Success(response.payment);
+    } on DioException catch (e) {
+      return Error(MedusaError.fromHttp(
+        status: e.response?.statusCode,
+        body: e.response?.data,
+        cause: e,
+      ));
+    } catch (error, stack) {
+      log(error.toString());
+      log(stack.toString());
+      return Error(MedusaError(
+          code: 'unknown', type: 'unknown', message: error.toString()));
+    }
+  }
 
   Future<Result<Fulfillment, MedusaError>> cancelFulfillment({
     required String fulfillmentId,

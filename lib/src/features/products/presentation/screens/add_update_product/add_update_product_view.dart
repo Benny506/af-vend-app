@@ -18,6 +18,7 @@ import 'package:medusa_admin_dart_client/src/features/products/data/models/creat
 
 import 'components/index.dart';
 import 'package:medusa_admin/src/core/extensions/context_extension.dart';
+import 'package:medusa_admin/src/core/constants/colors.dart';
 
 @RoutePage()
 class AddUpdateProductView extends StatefulWidget {
@@ -52,7 +53,16 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
     productCrudBloc = ProductCrudBloc.instance;
     uploadImagesCubit = UploadFilesCubit.instance;
     uploadThumbnailCubit = UploadFilesCubit.instance;
-    product = widget.updateProductReq?.product;
+    // Initialise with a blank product when creating so copyWith never returns null
+    product = widget.updateProductReq?.product ??
+        const Product(
+          id: '',
+          title: '',
+          handle: '',
+          isGiftcard: false,
+          status: ProductStatus.draft,
+          discountable: true,
+        );
     Future.delayed(350.milliseconds).then((value) {
       switch (widget.updateProductReq?.number) {
         case 1:
@@ -173,7 +183,18 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
                   ? const Text('Update Product')
                   : const Text('New Product'),
               actions: [
-                TextButton(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ColorManager.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
                     onPressed: () async {
                       if (!keyForm.currentState!.validate()) {
                         generalTileCtrl.expand();
@@ -187,9 +208,12 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
                         await createProduct();
                       }
                     },
-                    child: updateMode
-                        ? const Text('Save')
-                        : const Text('Publish')),
+                    child: Text(
+                      updateMode ? 'Save' : 'Publish',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
               ],
             ),
             body: SafeArea(
@@ -205,9 +229,6 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
                             controller: generalTileCtrl,
                             product: product,
                             onSaved: (product) {
-                              if (this.product == null) {
-                                // this.product = const Product();
-                              }
                               this.product = this.product?.copyWith(
                                     title: product.title,
                                     subtitle: product.subtitle,
@@ -223,9 +244,6 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
                           updateMode: updateMode,
                           product: product,
                           onSaved: (product) {
-                            if (this.product == null) {
-                              // this.product = const Product();
-                            }
                             this.product = this.product?.copyWith(
                                   collection: product.collection,
                                   tags: product.tags,
@@ -240,9 +258,6 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
                           product: product,
                           controller: variantTileCtrl,
                           onSaved: (product) {
-                            if (this.product == null) {
-                              // this.product = const Product();
-                            }
                             this.product = this.product?.copyWith(
                                   options: product.options,
                                   variants: product.variants,
@@ -254,9 +269,6 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
                           controller: attributeTileCtrl,
                           product: product,
                           onSaved: (product) {
-                            if (this.product == null) {
-                              // this.product = const Product();
-                            }
                             this.product = this.product?.copyWith(
                                   width: product?.width,
                                   length: product?.length,
@@ -331,21 +343,34 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
       await uploadThumbnailCubit.uploadFiles([thumbnailImage!]);
     }
 
-    productCrudBloc.add(ProductCrudEvent.create(CreateProductReq(
-      title: product?.title ?? '',
-      subtitle: product?.subtitle,
-      description: product?.description,
-      handle: product?.handle,
-      isGiftcard: product?.isGiftcard,
-      discountable: product?.discountable,
-      thumbnail: product?.thumbnail,
-      status: product?.status?.name,
-      images: product?.images?.map((e) => e.url ?? '').toList(),
-      options: product?.options?.map((e) => CreateProductOptionReq(
+    final List<CreateProductOptionReq> finalOptions;
+    if (product?.options == null || product!.options!.isEmpty) {
+      finalOptions = [
+        const CreateProductOptionReq(
+          title: 'Size',
+          values: ['Default Size'],
+        )
+      ];
+    } else {
+      finalOptions = product!.options!.map((e) => CreateProductOptionReq(
         title: e.title ?? '',
         values: e.values?.map((val) => val.value ?? '').toList() ?? [],
-      )).toList() ?? [],
-      variants: product?.variants?.map((e) => CreateProductVariantReq(
+      )).toList();
+    }
+
+    final List<CreateProductVariantReq> finalVariants;
+    if (product?.variants == null || product!.variants!.isEmpty) {
+      finalVariants = [
+        const CreateProductVariantReq(
+          title: 'Default Variant',
+          prices: [],
+          options: {
+            'Size': 'Default Size',
+          },
+        )
+      ];
+    } else {
+      finalVariants = product!.variants!.map((e) => CreateProductVariantReq(
         title: e.title ?? '',
         sku: e.sku,
         barcode: e.barcode,
@@ -366,7 +391,21 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
         midCode: e.midCode?.toString(),
         material: e.material,
         metadata: e.metadata,
-      )).toList(),
+      )).toList();
+    }
+
+    productCrudBloc.add(ProductCrudEvent.create(CreateProductReq(
+      title: product?.title ?? '',
+      subtitle: product?.subtitle,
+      description: product?.description,
+      handle: product?.handle,
+      isGiftcard: product?.isGiftcard,
+      discountable: product?.discountable,
+      thumbnail: product?.thumbnail,
+      status: product?.status?.name,
+      images: product?.images?.map((e) => e.url ?? '').toList(),
+      options: finalOptions,
+      variants: finalVariants,
       weight: product?.weight?.toString(),
       height: product?.height?.toString(),
       width: product?.width?.toString(),

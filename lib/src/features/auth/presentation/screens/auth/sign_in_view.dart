@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:auto_route/auto_route.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -361,31 +359,29 @@ class _SignInViewState extends State<SignInView> {
                                         ),
                                       ],
                                     ),
-                                    if (kDebugMode) ...[
-                                      const Gap(12.0),
-                                      Hero(
-                                        tag: 'Test Sign In',
-                                        child: OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: const Color(0xFF344F16),
-                                            side: const BorderSide(color: Color(0xFF344F16)),
-                                            minimumSize: const Size(double.infinity, 50.0),
-                                            shape: const RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                                            ),
-                                          ),
-                                          onPressed: loading
-                                              ? null
-                                              : () async {
-                                                  emailCtrl.text = 'chidi.mgbara@gmail.com';
-                                                  passwordCtrl.text = 'EMMYfinest@123';
-                                                  await _signIn();
-                                                },
-                                          icon: const Icon(Icons.bug_report),
-                                          label: const Text('Test Sign In'),
-                                        ),
-                                      ),
-                                    ],
+                                     const Gap(12.0),
+                                     Hero(
+                                       tag: 'Test Sign In',
+                                       child: OutlinedButton.icon(
+                                         style: OutlinedButton.styleFrom(
+                                           foregroundColor: const Color(0xFF344F16),
+                                           side: const BorderSide(color: Color(0xFF344F16)),
+                                           minimumSize: const Size(double.infinity, 50.0),
+                                           shape: const RoundedRectangleBorder(
+                                             borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                                           ),
+                                         ),
+                                         onPressed: loading
+                                             ? null
+                                             : () async {
+                                                 emailCtrl.text = 'chidi.mgbara@gmail.com';
+                                                 passwordCtrl.text = 'EMMYfinest@123';
+                                                 await _signIn();
+                                               },
+                                         icon: const Icon(Icons.bug_report),
+                                         label: const Text('Test Sign In'),
+                                       ),
+                                     ),
                                   ],
                                 ),
                               ),
