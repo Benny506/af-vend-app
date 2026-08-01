@@ -236,6 +236,7 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
                                     material: product.material,
                                     description: product.description,
                                     discountable: product.discountable,
+                                    status: product.status,
                                   );
                             }),
                         space,

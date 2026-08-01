@@ -18,11 +18,13 @@ class MedusaV1ResponseTransformer extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final isOrderRetrieve = options.path.startsWith('/admin/orders/') && 
-        !options.path.contains('/deliveries') && 
+    final String path = options.path.startsWith('/') ? options.path : '/${options.path}';
+
+    final isOrderRetrieve = path.startsWith('/admin/orders/') && 
+        !path.contains('/deliveries') && 
         options.method == 'GET';
     
-    final isProductRetrieve = options.path.startsWith('/admin/products/') &&
+    final isProductRetrieve = path.startsWith('/admin/products/') &&
         options.method == 'GET';
 
     if (isOrderRetrieve) {
@@ -134,28 +136,52 @@ class MedusaV1ResponseTransformer extends Interceptor {
       }
     }
 
-    // V1 Create Product payload wrapping
-    if (options.path == '/admin/products' && options.method == 'POST') {
+    // V1 Create Product payload wrapping and normalization
+    if (path == '/admin/products' && options.method == 'POST') {
       final data = options.data;
-      if (data is Map<String, dynamic> && !data.containsKey('product')) {
-        options.data = {'product': data};
+      if (data is Map<String, dynamic>) {
+        final Map<String, dynamic> productData = data.containsKey('product') 
+            ? (data['product'] as Map<String, dynamic>) 
+            : data;
+        _normalizeProductPayload(productData, isUpdate: false);
+        if (!data.containsKey('product')) {
+          options.data = {'product': productData};
+        }
+      }
+    }
+
+    // V1 Update Product payload wrapping and normalization
+    if (path.startsWith('/admin/products/') && 
+        !path.contains('/variants') && 
+        !path.contains('/options') && 
+        options.method == 'POST') {
+      final data = options.data;
+      if (data is Map<String, dynamic>) {
+        final Map<String, dynamic> productData = data.containsKey('product') 
+            ? (data['product'] as Map<String, dynamic>) 
+            : data;
+        productData.remove('variants');
+        _normalizeProductPayload(productData, isUpdate: true);
+        if (!data.containsKey('product')) {
+          options.data = {'product': productData};
+        }
       }
     }
 
     // Rewrites for V1 Store endpoints (V2 calls /admin/stores plural)
-    if (options.path == '/admin/stores' ||
-        options.path.startsWith('/admin/stores?') ||
-        options.path.startsWith('/admin/stores/')) {
+    if (path == '/admin/stores' ||
+        path.startsWith('/admin/stores?') ||
+        path.startsWith('/admin/stores/')) {
       options.path = '/admin/store';
     }
 
     // Rewrites for V2 Promotions -> V1 Discounts
-    if (options.path.startsWith('/admin/promotions')) {
+    if (path.startsWith('/admin/promotions')) {
       options.path = options.path.replaceFirst('/admin/promotions', '/admin/discounts');
     }
 
     // Request body transformer: V2 Promotions -> V1 Discounts
-    if (options.path.startsWith('/admin/discounts')) {
+    if (path.startsWith('/admin/discounts')) {
       final data = options.data;
       if (data is Map<String, dynamic>) {
         final v1Payload = <String, dynamic>{};
@@ -195,7 +221,7 @@ class MedusaV1ResponseTransformer extends Interceptor {
     }
 
     // Request body transformer: V2 Regions -> V1 Regions
-    if (options.path == '/admin/regions' || (options.path.startsWith('/admin/regions/') && options.method == 'POST')) {
+    if (path == '/admin/regions' || (path.startsWith('/admin/regions/') && options.method == 'POST')) {
       final data = options.data;
       if (data is Map<String, dynamic>) {
         final metadata = data['metadata'];
@@ -207,17 +233,17 @@ class MedusaV1ResponseTransformer extends Interceptor {
     }
 
     // Mocks for endpoints V1 doesn't have
-    if (options.path.contains('/admin/currencies')) {
+    if (path.contains('/admin/currencies')) {
       _handleCurrenciesRequest(options, handler);
       return;
     }
 
-    if (options.path.contains('/admin/tax-regions')) {
+    if (path.contains('/admin/tax-regions')) {
       _handleTaxRegionsRequest(options, handler);
       return;
     }
 
-    if (options.path.contains('/admin/customer-groups')) {
+    if (path.contains('/admin/customer-groups')) {
       final hasCustomerFilter = options.queryParameters.containsKey('customers') ||
           options.queryParameters.keys.any((k) => k.startsWith('customers'));
       if (hasCustomerFilter) {
@@ -226,12 +252,12 @@ class MedusaV1ResponseTransformer extends Interceptor {
       }
     }
 
-    if (options.path.contains('/admin/inventory-items') ||
-        options.path.contains('/admin/stock-locations') ||
-        options.path.contains('/admin/reservations') ||
-        options.path.contains('/admin/order-edits') ||
-        options.path.contains('/admin/campaigns') ||
-        options.path.contains('/admin/price-preferences')) {
+    if (path.contains('/admin/inventory-items') ||
+        path.contains('/admin/stock-locations') ||
+        path.contains('/admin/reservations') ||
+        path.contains('/admin/order-edits') ||
+        path.contains('/admin/campaigns') ||
+        path.contains('/admin/price-preferences')) {
       _handleV2OnlyEndpointMock(options, handler);
       return;
     }
@@ -514,8 +540,133 @@ class MedusaV1ResponseTransformer extends Interceptor {
         'offset': 0,
         'count': 0,
       },
-      statusCode: 200,
     ));
+  }
+
+  void _normalizeProductPayload(Map<String, dynamic> data, {bool isUpdate = false}) {
+    // Map type_id to type object for V1 compatibility
+    if (data.containsKey('type_id') && data['type_id'] != null) {
+      data['type'] = {'id': data['type_id']};
+    }
+
+    // Remove V2 keys that are null or not supported at root
+    final keysToRemove = [
+      'type_id',
+      'external_id',
+      'shipping_profile_id',
+      'profile_id',
+      'categories',
+      'sales_channels',
+      'store_id',
+      'deleted_at',
+      'updated_at',
+      'created_at',
+      'profiles',
+      'profile',
+      'store',
+      'collection',
+    ];
+    for (final key in keysToRemove) {
+      data.remove(key);
+    }
+
+    // Clean null fields at root to prevent V1 validation complaints
+    data.removeWhere((key, value) => value == null);
+
+    // Convert empty string dimensions to null or numeric
+    for (final key in ['weight', 'length', 'height', 'width']) {
+      if (data.containsKey(key)) {
+        final val = data[key];
+        if (val == '' || val == null) {
+          data.remove(key);
+        } else if (val is String) {
+          data[key] = double.tryParse(val) ?? int.tryParse(val);
+        }
+      }
+    }
+
+    // Normalize tags: in V1, tags is list of objects with "value" field
+    if (data['tags'] is List) {
+      final tagsList = data['tags'] as List;
+      final normalizedTags = <Map<String, dynamic>>[];
+      for (final t in tagsList) {
+        if (t is Map<String, dynamic>) {
+          if (t['value'] != null) {
+            normalizedTags.add({
+              'value': t['value'].toString(),
+              if (t['id'] != null) 'id': t['id'].toString(),
+            });
+          }
+        } else if (t is String) {
+          normalizedTags.add({'value': t});
+        }
+      }
+      data['tags'] = normalizedTags;
+    }
+
+    // 2. Normalize options
+    if (data['options'] is List) {
+      final optionsList = data['options'] as List;
+      final normalizedOptions = <Map<String, dynamic>>[];
+      for (final opt in optionsList) {
+        if (opt is Map<String, dynamic>) {
+          final optCopy = Map<String, dynamic>.from(opt);
+          optCopy.remove('values'); // V1 options must not have "values"
+          optCopy.removeWhere((k, v) => v == null);
+          normalizedOptions.add(optCopy);
+        }
+      }
+      data['options'] = normalizedOptions;
+    }
+
+    // 3. Normalize variants
+    if (data['variants'] is List) {
+      final variantsList = data['variants'] as List;
+      final normalizedVariants = <Map<String, dynamic>>[];
+      for (final variant in variantsList) {
+        if (variant is Map<String, dynamic>) {
+          final varCopy = Map<String, dynamic>.from(variant);
+          // Remove V2 variant properties
+          varCopy.remove('values');
+          varCopy.remove('variant_rank');
+          varCopy.remove('inventory_items');
+          varCopy.remove('rank');
+
+          varCopy.removeWhere((k, v) => v == null);
+
+          // Clean empty dimensions in variant
+          for (final key in ['weight', 'length', 'height', 'width']) {
+            if (varCopy.containsKey(key)) {
+              final val = varCopy[key];
+              if (val == '' || val == null) {
+                varCopy.remove(key);
+              } else if (val is String) {
+                varCopy[key] = double.tryParse(val) ?? int.tryParse(val);
+              }
+            }
+          }
+
+          // Clean options: V2 has Map, V1 needs List of { "value": "..." } or { "option_id": "...", "value": "..." }
+          if (varCopy['options'] is Map<String, dynamic>) {
+            final optsMap = varCopy['options'] as Map<String, dynamic>;
+            final optsList = <Map<String, dynamic>>[];
+            optsMap.forEach((key, val) {
+              final Map<String, dynamic> optObj = {
+                'value': val.toString(),
+              };
+              if (key.startsWith('opt_')) {
+                optObj['option_id'] = key;
+              }
+              optsList.add(optObj);
+            });
+            varCopy['options'] = optsList;
+          }
+
+          normalizedVariants.add(varCopy);
+        }
+      }
+      data['variants'] = normalizedVariants;
+    }
   }
 
   // ---------------------------------------------------------------------------

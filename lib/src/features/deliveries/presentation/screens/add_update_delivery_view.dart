@@ -187,6 +187,7 @@ class _AddUpdateDeliveryViewState extends State<AddUpdateDeliveryView> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const CloseButton(),
         title: Text(isEdit ? 'Edit Delivery' : 'Create Delivery'),
         actions: [
           TextButton.icon(
@@ -332,9 +333,13 @@ class _AddUpdateDeliveryViewState extends State<AddUpdateDeliveryView> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           value: selectedDeliveryMode,
-                          items: ['Standard', 'Express', 'Next Day', 'Scheduled']
-                              .map((mode) => DropdownMenuItem(value: mode, child: Text(mode)))
-                              .toList(),
+                          items: (() {
+                            final modes = ['Standard', 'Express', 'Next Day', 'Scheduled'];
+                            if (selectedDeliveryMode != null && !modes.contains(selectedDeliveryMode)) {
+                              modes.add(selectedDeliveryMode!);
+                            }
+                            return modes.map((mode) => DropdownMenuItem(value: mode, child: Text(mode))).toList();
+                          })(),
                           onChanged: (val) {
                             if (val != null) setState(() => selectedDeliveryMode = val);
                           },
