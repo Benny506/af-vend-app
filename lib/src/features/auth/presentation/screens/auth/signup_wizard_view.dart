@@ -244,8 +244,8 @@ class _SignupWizardViewState extends State<SignupWizardView> {
         }, onConflict: 'email');
       }
 
-      // 3. Insert user record into public.users table
-      await supabase.from('users').insert({
+      // 3. Upsert user record into public.users table
+      await supabase.from('users').upsert({
         'email': email,
         'id': user.id,
         'uid': user.id,
