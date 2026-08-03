@@ -8,6 +8,7 @@ import 'package:medusa_admin/src/core/extensions/context_extension.dart';
 import 'package:medusa_admin/src/core/utils/custom_text_field.dart';
 import 'package:medusa_admin_dart_client/medusa_admin_dart_client_v2.dart';
 import 'package:flex_expansion_tile/flex_expansion_tile.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:medusa_admin/src/core/extensions/text_style_extension.dart';
 
 class ProductGeneralInformation extends StatefulWidget {
@@ -33,6 +34,7 @@ class _ProductGeneralInformationState extends State<ProductGeneralInformation> {
   final materialCtrl = TextEditingController();
   final descriptionCtrl = TextEditingController();
   bool discountable = false;
+  ProductStatus status = ProductStatus.draft;
   final key = GlobalKey();
 
   @override
@@ -44,6 +46,7 @@ class _ProductGeneralInformationState extends State<ProductGeneralInformation> {
       materialCtrl.text = widget.product!.material ?? '';
       descriptionCtrl.text = widget.product!.description ?? '';
       discountable = widget.product!.discountable ?? false;
+      status = widget.product!.status;
     }
     super.initState();
   }
@@ -79,6 +82,31 @@ class _ProductGeneralInformationState extends State<ProductGeneralInformation> {
           Text('To start selling, all you need is a name and a price.',
               style: smallTextStyle!.copyWith(color: manatee)),
           space,
+          DropdownButtonFormField<ProductStatus>(
+            value: status,
+            style: context.bodyMedium,
+            decoration: InputDecoration(
+              labelText: 'Status',
+              labelStyle: context.bodyMedium?.copyWith(color: manatee),
+              enabledBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).scaffoldBackgroundColor,
+            ),
+            items: ProductStatus.values
+                .map((e) => DropdownMenuItem<ProductStatus>(
+                      value: e,
+                      child: Text(e.name.capitalize),
+                    ))
+                .toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() => status = val);
+              }
+            },
+          ),
+          space,
           LabeledTextField(
             label: 'Title',
             hintText: 'Winter Jacket',
@@ -92,9 +120,9 @@ class _ProductGeneralInformationState extends State<ProductGeneralInformation> {
                 description:
                     descriptionCtrl.text.isEmpty ? null : descriptionCtrl.text,
                 discountable: discountable,
+                status: status,
                 id: '',
                 isGiftcard: false,
-                status: ProductStatus.draft,
               ));
             },
             required: true,

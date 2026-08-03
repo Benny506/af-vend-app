@@ -173,6 +173,7 @@ class _AddUpdatePickupRequestViewState extends State<AddUpdatePickupRequestView>
 
     return Scaffold(
       appBar: AppBar(
+        leading: const CloseButton(),
         title: Text(isEdit ? 'Edit Pickup Request' : 'New Pickup Request'),
         actions: [
           TextButton.icon(
