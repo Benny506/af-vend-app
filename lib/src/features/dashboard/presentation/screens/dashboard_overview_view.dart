@@ -45,7 +45,7 @@ class _DashboardOverviewViewState extends State<DashboardOverviewView> {
       ],
       child: Scaffold(
         backgroundColor: context.theme.scaffoldBackgroundColor,
-        drawer: const AppDrawer(),
+        drawer: null,
         appBar: AppBar(
           title: BlocBuilder<StoreBloc, StoreState>(
             builder: (context, state) {
@@ -65,6 +65,12 @@ class _DashboardOverviewViewState extends State<DashboardOverviewView> {
           centerTitle: true,
           elevation: 0,
           backgroundColor: const Color(0xFF344F16),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings_outlined, color: Colors.white),
+              onPressed: () => context.pushRoute(const StoreSettingsRoute()),
+            ),
+          ],
         ),
         body: RefreshIndicator(
           onRefresh: () async {
@@ -244,6 +250,147 @@ class _DashboardOverviewViewState extends State<DashboardOverviewView> {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // 1. Vendor Wallet & Payout Banner
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 16.0),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF2C3E1B), Color(0xFF1B2C10)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16.0),
+                                  border: Border.all(
+                                    color: const Color(0xFFE48629).withOpacity(0.25),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Positioned(
+                                      right: -10,
+                                      bottom: -10,
+                                      child: Icon(
+                                        CupertinoIcons.creditcard_fill,
+                                        size: 90,
+                                        color: Colors.white.withOpacity(0.04),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'AFRIOMARKETS VENDOR WALLET',
+                                                style: GoogleFonts.comfortaa(
+                                                  color: const Color(0xFFF8B55B),
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.8,
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFE48629).withOpacity(0.2),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  'Payout Ready',
+                                                  style: GoogleFonts.comfortaa(
+                                                    color: const Color(0xFFF8B55B),
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const Gap(10),
+                                          Text(
+                                            (revenue * 0.85).formatAsPrice(storeCurrency),
+                                            style: GoogleFonts.comfortaa(
+                                              color: Colors.white,
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const Gap(2),
+                                          Text(
+                                            'Available Balance (15% marketplace fee commission deducted)',
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.55),
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                          const Gap(12),
+                                          const Divider(color: Colors.white10, height: 1),
+                                          const Gap(12),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Next Scheduled Payout',
+                                                    style: TextStyle(
+                                                      color: Colors.white.withOpacity(0.4),
+                                                      fontSize: 8.5,
+                                                    ),
+                                                  ),
+                                                  const Gap(2),
+                                                  Text(
+                                                    'Friday, Aug 7, 2026',
+                                                    style: TextStyle(
+                                                      color: Colors.white.withOpacity(0.85),
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('Manual payout request received. Processing will take 2-3 business days.'),
+                                                      backgroundColor: Color(0xFF344F16),
+                                                    ),
+                                                  );
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFFE48629),
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                                  minimumSize: Size.zero,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  elevation: 0,
+                                                ),
+                                                child: Text(
+                                                  'Request Payout',
+                                                  style: GoogleFonts.comfortaa(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
                               // 2. Metrics Grid
                               GridView.count(
                                 crossAxisCount: 2,
@@ -282,6 +429,44 @@ class _DashboardOverviewViewState extends State<DashboardOverviewView> {
                                     isDark: isDark,
                                   ),
                                 ],
+                              ),
+
+                              const Gap(20),
+                              Text(
+                                'Quick Actions',
+                                style: GoogleFonts.comfortaa(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? const Color(0xFFF0EAD6) : const Color(0xFF1A1400),
+                                ),
+                              ),
+                              const Gap(12),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _buildQuickActionBtn(
+                                      label: 'Add Product',
+                                      icon: Icons.add_photo_alternate_outlined,
+                                      color: const Color(0xFFE48629),
+                                      onTap: () => context.pushRoute(AddUpdateProductRoute()),
+                                    ),
+                                    const Gap(12),
+                                    _buildQuickActionBtn(
+                                      label: 'New Pickup',
+                                      icon: CupertinoIcons.cube_box,
+                                      color: const Color(0xFF344F16),
+                                      onTap: () => context.pushRoute(AddUpdatePickupRequestRoute()),
+                                    ),
+                                    const Gap(12),
+                                    _buildQuickActionBtn(
+                                      label: 'New Delivery',
+                                      icon: Icons.local_shipping_outlined,
+                                      color: Colors.blue.shade600,
+                                      onTap: () => context.pushRoute(AddUpdateDeliveryRoute()),
+                                    ),
+                                  ],
+                                ),
                               ),
 
                               const Gap(24),
@@ -339,6 +524,64 @@ class _DashboardOverviewViewState extends State<DashboardOverviewView> {
                         },
                       );
                     },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionBtn({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final isDark = context.isDark;
+    return Container(
+      width: 140,
+      height: 90,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 18,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: GoogleFonts.comfortaa(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? const Color(0xFFF0EAD6) : const Color(0xFF1A1400),
                   ),
                 ),
               ],

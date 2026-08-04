@@ -82,12 +82,12 @@ class _AppDrawerState extends State<AppDrawer> {
       DrawerDestination(
         icon: const Icon(CupertinoIcons.cube_box),
         label: 'Pickup Requests',
-        route: const PickupRequestsRoute(),
+        route: PickupRequestsRoute(),
       ),
       DrawerDestination(
         icon: const Icon(Icons.local_shipping),
         label: 'Deliveries',
-        route: const DeliveriesRoute(),
+        route: DeliveriesRoute(),
       ),
       const DrawerDestination.divider(),
       DrawerDestination(

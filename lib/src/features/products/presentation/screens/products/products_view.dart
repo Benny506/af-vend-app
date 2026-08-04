@@ -2,6 +2,7 @@ import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:gap/gap.dart';
@@ -138,7 +139,7 @@ class _ProductsViewState extends State<ProductsView> {
             }),
       ],
       child: Scaffold(
-        drawer: const AppDrawer(),
+        drawer: null,
         drawerEdgeDragWidth: context.drawerEdgeDragWidth,
         endDrawer: Drawer(
           child: ProductsFilterView(
@@ -232,6 +233,7 @@ class _ProductsViewState extends State<ProductsView> {
         body: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
             MedusaSliverAppBar(
+              backgroundColor: const Color(0xFF344F16),
               title: Builder(builder: (context) {
                 final productsCount = context.select<ProductCrudBloc, int>(
                     (ProductCrudBloc bloc) =>
@@ -239,15 +241,21 @@ class _ProductsViewState extends State<ProductsView> {
                             .mapOrNull(products: (state) => state.count) ??
                         0);
                 return Text(
-                    productsCount > 0
-                        ? 'Products ($productsCount)'
-                        : 'Products',
-                    overflow: TextOverflow.ellipsis);
+                  productsCount > 0
+                      ? 'Products ($productsCount)'
+                      : 'Products',
+                  style: GoogleFonts.comfortaa(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.white,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                );
               }),
               actions: [
                 PopupMenuButton<SortOptions?>(
-                    icon: const Icon(CupertinoIcons.sort_up),
-                    padding: const EdgeInsets.all(16.0),
+                  icon: const Icon(CupertinoIcons.sort_up, color: Colors.white),
+                  padding: const EdgeInsets.all(16.0),
                     position: PopupMenuPosition.under,
                     onSelected: (SortOptions? result) {
                       if (result != null) {

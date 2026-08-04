@@ -107,6 +107,7 @@ import 'package:medusa_admin/src/features/pickup_requests/presentation/screens/a
 import 'package:medusa_admin/src/features/deliveries/presentation/screens/deliveries_view.dart';
 import 'package:medusa_admin/src/features/deliveries/presentation/screens/deliveries_details_view.dart';
 import 'package:medusa_admin/src/features/deliveries/presentation/screens/add_update_delivery_view.dart';
+import 'package:medusa_admin/src/features/pickup_requests/presentation/screens/pickup_requests_deliveries_view.dart';
 
 part 'app_router.gr.dart';
 
@@ -145,10 +146,9 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: PromotionsRoute.page),
     AutoRoute(page: CampaignsRoute.page),
     AutoRoute(page: PricingRoute.page),
-    AutoRoute(page: StoreSettingsRoute.page),
-    AutoRoute(page: AppSettingsRoute.page),
     AutoRoute(page: PickupRequestsRoute.page),
     AutoRoute(page: DeliveriesRoute.page),
+    AutoRoute(page: PickupRequestsDeliveriesRoute.page),
   ];
 
   @override
@@ -287,6 +287,8 @@ class AppRouter extends RootStackRouter {
         AutoRoute(page: AppDevSettingsRoute.page),
         AutoRoute(page: AppBarStyleRoute.page),
         AutoRoute(page: DashboardOverviewRoute.page),
+        AutoRoute(page: StoreSettingsRoute.page),
+        AutoRoute(page: AppSettingsRoute.page),
       ]),
     ];
   }
