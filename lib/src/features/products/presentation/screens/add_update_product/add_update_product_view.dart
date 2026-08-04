@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:flutter/foundation.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flex_expansion_tile/flex_expansion_tile.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +18,9 @@ import 'package:medusa_admin_dart_client/medusa_admin_dart_client_v2.dart';
 import 'package:medusa_admin_dart_client/src/features/products/data/models/create_product_option_req.dart';
 import 'package:medusa_admin_dart_client/src/features/products/data/models/create_product_variant_req.dart';
 import 'package:medusa_admin_dart_client/src/features/products/data/models/create_product_variant_price_req.dart';
+import 'package:medusa_admin/src/core/utils/file_use_case/upload_use_case.dart';
+import 'package:medusa_admin/src/core/utils/image_picker_helper.dart';
+import 'package:medusa_admin/src/core/di/di.dart';
 
 import 'components/index.dart';
 import 'package:medusa_admin/src/core/extensions/context_extension.dart';
@@ -296,15 +302,14 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
                           },
                         ),
                         space,
-                        // ProductMedia(
-                        //   controller: mediaTileCtrl,
-                        //   product: product,
-                        //   updateMode: updateMode,
-                        //   onMediaChanged: (images, imagesToDelete) {
-                        //     this.images = images;
-                        //     // this.imagesToDelete = imagesToDelete;
-                        //   },
-                        // )
+                        ProductMedia(
+                          controller: mediaTileCtrl,
+                          product: product,
+                          updateMode: updateMode,
+                          onMediaChanged: (images) {
+                            this.images = images;
+                          },
+                        )
                       ],
                     ),
                   ),
@@ -318,6 +323,7 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
   }
 
   void deleteTempImages() {
+    if (kIsWeb) return;
     try {
       final imagesToDelete = List<File>.from(images);
       images.clear();
@@ -336,149 +342,225 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
     }
   }
 
+  Future<List<String>> _uploadFiles(List<File> filesToUpload) async {
+    if (filesToUpload.isEmpty) return [];
+    
+    final formData = FormData();
+    for (final file in filesToUpload) {
+      if (kIsWeb) {
+        final bytes = ImagePickerHelper.webBytesCache[file.path];
+        if (bytes != null) {
+          formData.files.add(MapEntry(
+            'files',
+            MultipartFile.fromBytes(
+              bytes,
+              filename: file.path.split('/').last,
+            ),
+          ));
+        }
+      } else {
+        formData.files.add(MapEntry(
+          'files',
+          await MultipartFile.fromFile(
+            file.path,
+            filename: file.path.split('/').last,
+          ),
+        ));
+      }
+    }
+
+    final result = await getIt<UploadUseCase>()(formData);
+    return result.when(
+      (uploadedFiles) => uploadedFiles.map((e) => e.url ?? '').where((url) => url.isNotEmpty).toList(),
+      (error) {
+        debugPrint('Upload error: $error');
+        throw error;
+      },
+    );
+  }
+
   Future<void> createProduct() async {
-    if (images.isNotEmpty) {
-      await uploadImagesCubit.uploadFiles(images);
-    }
-    if (thumbnailImage != null) {
-      await uploadThumbnailCubit.uploadFiles([thumbnailImage!]);
-    }
+    EasyLoading.show(status: 'Creating product...');
+    try {
+      String? thumbnailUrl;
+      if (thumbnailImage != null) {
+        EasyLoading.show(status: 'Uploading thumbnail...');
+        final uploaded = await _uploadFiles([thumbnailImage!]);
+        if (uploaded.isNotEmpty) {
+          thumbnailUrl = uploaded.first;
+        }
+      }
 
-    final List<CreateProductOptionReq> finalOptions;
-    if (product?.options == null || product!.options!.isEmpty) {
-      finalOptions = [
-        const CreateProductOptionReq(
-          title: 'Size',
-          values: ['Default Size'],
-        )
-      ];
-    } else {
-      finalOptions = product!.options!.map((e) => CreateProductOptionReq(
-        title: e.title ?? '',
-        values: e.values?.map((val) => val.value ?? '').toList() ?? [],
-      )).toList();
-    }
+      List<String> imageUrls = [];
+      if (images.isNotEmpty) {
+        EasyLoading.show(status: 'Uploading images...');
+        imageUrls = await _uploadFiles(images);
+      }
 
-    final List<CreateProductVariantReq> finalVariants;
-    if (product?.variants == null || product!.variants!.isEmpty) {
-      finalVariants = [
-        const CreateProductVariantReq(
-          title: 'Default Variant',
-          prices: [],
-          options: {
-            'Size': 'Default Size',
-          },
-        )
-      ];
-    } else {
-      finalVariants = product!.variants!.map((e) => CreateProductVariantReq(
-        title: e.title ?? '',
-        sku: e.sku,
-        barcode: e.barcode,
-        ean: e.ean,
-        upc: e.upc,
-        prices: e.prices?.map((p) => CreateProductVariantPriceReq(
-          currencyCode: p.currencyCode ?? '',
-          amount: p.amount?.toInt() ?? 0,
-        )).toList() ?? [],
-        allowBackorder: e.allowBackorder,
-        manageInventory: e.manageInventory,
-        weight: e.weight?.toString(),
-        height: e.height?.toString(),
-        width: e.width?.toString(),
-        length: e.length?.toString(),
-        hsCode: e.hsCode?.toString(),
-        originCountry: e.originCountry,
-        midCode: e.midCode?.toString(),
-        material: e.material,
-        metadata: e.metadata,
-      )).toList();
-    }
+      EasyLoading.show(status: 'Creating product...');
 
-    productCrudBloc.add(ProductCrudEvent.create(CreateProductReq(
-      title: product?.title ?? '',
-      subtitle: product?.subtitle,
-      description: product?.description,
-      handle: product?.handle,
-      isGiftcard: product?.isGiftcard,
-      discountable: product?.discountable,
-      thumbnail: product?.thumbnail,
-      status: product?.status?.name,
-      images: product?.images?.map((e) => e.url ?? '').toList(),
-      options: finalOptions,
-      variants: finalVariants,
-      weight: product?.weight?.toString(),
-      height: product?.height?.toString(),
-      width: product?.width?.toString(),
-      length: product?.length?.toString(),
-      hsCode: product?.hsCode?.toString(),
-      originCountry: product?.originCountry,
-      midCode: product?.midCode?.toString(),
-      material: product?.material,
-    )));
+      final List<CreateProductOptionReq> finalOptions;
+      if (product?.options == null || product!.options!.isEmpty) {
+        finalOptions = [
+          const CreateProductOptionReq(
+            title: 'Size',
+            values: ['Default Size'],
+          )
+        ];
+      } else {
+        finalOptions = product!.options!.map((e) => CreateProductOptionReq(
+          title: e.title ?? '',
+          values: e.values?.map((val) => val.value ?? '').toList() ?? [],
+        )).toList();
+      }
+
+      final List<CreateProductVariantReq> finalVariants;
+      if (product?.variants == null || product!.variants!.isEmpty) {
+        finalVariants = [
+          const CreateProductVariantReq(
+            title: 'Default Variant',
+            prices: [],
+            options: {
+              'Size': 'Default Size',
+            },
+          )
+        ];
+      } else {
+        finalVariants = product!.variants!.map((e) => CreateProductVariantReq(
+          title: e.title ?? '',
+          sku: e.sku,
+          barcode: e.barcode,
+          ean: e.ean,
+          upc: e.upc,
+          prices: e.prices?.map((p) => CreateProductVariantPriceReq(
+            currencyCode: p.currencyCode ?? '',
+            amount: p.amount?.toInt() ?? 0,
+          )).toList() ?? [],
+          allowBackorder: e.allowBackorder,
+          manageInventory: e.manageInventory,
+          weight: e.weight?.toString(),
+          height: e.height?.toString(),
+          width: e.width?.toString(),
+          length: e.length?.toString(),
+          hsCode: e.hsCode?.toString(),
+          originCountry: e.originCountry,
+          midCode: e.midCode?.toString(),
+          material: e.material,
+          metadata: e.metadata,
+        )).toList();
+      }
+
+      productCrudBloc.add(ProductCrudEvent.create(CreateProductReq(
+        title: product?.title ?? '',
+        subtitle: product?.subtitle,
+        description: product?.description,
+        handle: product?.handle,
+        isGiftcard: product?.isGiftcard,
+        discountable: product?.discountable,
+        thumbnail: thumbnailUrl,
+        status: product?.status?.name,
+        images: imageUrls,
+        options: finalOptions,
+        variants: finalVariants,
+        weight: product?.weight?.toString(),
+        height: product?.height?.toString(),
+        width: product?.width?.toString(),
+        length: product?.length?.toString(),
+        hsCode: product?.hsCode?.toString(),
+        originCountry: product?.originCountry,
+        midCode: product?.midCode?.toString(),
+        material: product?.material,
+      )));
+    } catch (e) {
+      EasyLoading.dismiss();
+      context.showSnackBar('Failed to upload files: $e');
+    }
   }
 
   Future<void> updateProduct() async {
-    if (images.isNotEmpty) {
-      await uploadImagesCubit.uploadFiles(images);
-    }
-    final originalProduct = widget.updateProductReq!.product;
-    productCrudBloc.add(ProductCrudEvent.update(
-      widget.updateProductReq!.product.id,
-      UpdateProductReq(
-        title: originalProduct.title == product!.title ? null : product!.title,
-        subtitle: originalProduct.subtitle == product!.subtitle ? null : product!.subtitle,
-        handle: originalProduct.handle == product!.handle ? null : product!.handle,
-        material: originalProduct.material == product!.material ? null : product!.material,
-        description: originalProduct.description == product!.description ? null : product!.description,
-        discountable: product!.discountable,
-        tags: product!.tags?.map((e) => {'id': e.id ?? '', 'value': e.value ?? ''}).toList(),
-        typeId: product!.type?.id,
-        salesChannels:
-            product!.salesChannels?.map((e) => {'id': e.id ?? ''}).toList(),
-        variants: product!.variants?.map((e) => {
-          if (e.id != null) 'id': e.id,
-          'title': e.title,
-          'sku': e.sku,
-          'barcode': e.barcode,
-          'ean': e.ean,
-          'upc': e.upc,
-          'allow_backorder': e.allowBackorder,
-          'manage_inventory': e.manageInventory,
-          'weight': e.weight?.toString(),
-          'height': e.height?.toString(),
-          'width': e.width?.toString(),
-          'length': e.length?.toString(),
-          'hs_code': e.hsCode,
-          'origin_country': e.originCountry,
-          'mid_code': e.midCode,
-          'material': e.material,
-          'metadata': e.metadata,
-          'prices': e.prices?.map((p) => {
-            'currency_code': p.currencyCode,
-            'amount': p.amount?.toInt(),
+    EasyLoading.show(status: 'Updating product...');
+    try {
+      String? thumbnailUrl;
+      if (thumbnailImage != null) {
+        EasyLoading.show(status: 'Uploading thumbnail...');
+        final uploaded = await _uploadFiles([thumbnailImage!]);
+        if (uploaded.isNotEmpty) {
+          thumbnailUrl = uploaded.first;
+        }
+      }
+
+      List<String> imageUrls = [];
+      if (images.isNotEmpty) {
+        EasyLoading.show(status: 'Uploading images...');
+        imageUrls = await _uploadFiles(images);
+      }
+
+      EasyLoading.show(status: 'Updating product...');
+      final originalProduct = widget.updateProductReq!.product;
+
+      final List<String> finalImages = originalProduct.images?.map((e) => e.url ?? '').where((u) => u.isNotEmpty).toList() ?? [];
+      finalImages.addAll(imageUrls);
+
+      productCrudBloc.add(ProductCrudEvent.update(
+        widget.updateProductReq!.product.id,
+        UpdateProductReq(
+          title: originalProduct.title == product!.title ? null : product!.title,
+          subtitle: originalProduct.subtitle == product!.subtitle ? null : product!.subtitle,
+          handle: originalProduct.handle == product!.handle ? null : product!.handle,
+          material: originalProduct.material == product!.material ? null : product!.material,
+          description: originalProduct.description == product!.description ? null : product!.description,
+          discountable: product!.discountable,
+          tags: product!.tags?.map((e) => {'id': e.id ?? '', 'value': e.value ?? ''}).toList(),
+          typeId: product!.type?.id,
+          salesChannels:
+              product!.salesChannels?.map((e) => {'id': e.id ?? ''}).toList(),
+          variants: product!.variants?.map((e) => {
+            if (e.id != null) 'id': e.id,
+            'title': e.title,
+            'sku': e.sku,
+            'barcode': e.barcode,
+            'ean': e.ean,
+            'upc': e.upc,
+            'allow_backorder': e.allowBackorder,
+            'manage_inventory': e.manageInventory,
+            'weight': e.weight?.toString(),
+            'height': e.height?.toString(),
+            'width': e.width?.toString(),
+            'length': e.length?.toString(),
+            'hs_code': e.hsCode,
+            'origin_country': e.originCountry,
+            'mid_code': e.midCode,
+            'material': e.material,
+            'metadata': e.metadata,
+            'prices': e.prices?.map((p) => {
+              'currency_code': p.currencyCode,
+              'amount': p.amount?.toInt(),
+            }).toList(),
           }).toList(),
-        }).toList(),
-        width: originalProduct.width == product!.width ? null : product!.width?.toString(),
-        length: originalProduct.length == product!.length ? null : product!.length?.toString(),
-        height: originalProduct.height == product!.height ? null : product!.height?.toString(),
-        weight: originalProduct.weight == product!.weight ? null : product!.weight?.toString(),
-        midCode: originalProduct.midCode == product!.midCode ? null : product!.midCode,
-        hsCode: originalProduct.hsCode == product!.hsCode ? null : product!.hsCode,
-        originCountry:
-            originalProduct.originCountry == product!.originCountry ? null : product!.originCountry,
-        thumbnail: originalProduct.thumbnail == product!.thumbnail ? null : product!.thumbnail,
-        collectionId: originalProduct.collectionId == product!.collection?.id
-            ? null
-            : product!.collection?.id,
-        images: product!.images?.map((e) => e.url ?? '').toList(),
-        status: originalProduct.status == product!.status
-            ? null
-            : ProductStatus.values.firstWhere(
-                (e) => e.name == product!.status?.name,
-                orElse: () => ProductStatus.draft,
-              ),
-      ),
-    ));
+          width: originalProduct.width == product!.width ? null : product!.width?.toString(),
+          length: originalProduct.length == product!.length ? null : product!.length?.toString(),
+          height: originalProduct.height == product!.height ? null : product!.height?.toString(),
+          weight: originalProduct.weight == product!.weight ? null : product!.weight?.toString(),
+          midCode: originalProduct.midCode == product!.midCode ? null : product!.midCode,
+          hsCode: originalProduct.hsCode == product!.hsCode ? null : originalProduct.hsCode,
+          originCountry:
+              originalProduct.originCountry == product!.originCountry ? null : product!.originCountry,
+          thumbnail: thumbnailUrl ?? (originalProduct.thumbnail == product!.thumbnail ? null : product!.thumbnail),
+          collectionId: originalProduct.collectionId == product!.collection?.id
+              ? null
+              : product!.collection?.id,
+          images: finalImages,
+          status: originalProduct.status == product!.status
+              ? null
+              : ProductStatus.values.firstWhere(
+                  (e) => e.name == product!.status?.name,
+                  orElse: () => ProductStatus.draft,
+                ),
+        ),
+      ));
+    } catch (e) {
+      EasyLoading.dismiss();
+      context.showSnackBar('Failed to upload files: $e');
+    }
   }
 }

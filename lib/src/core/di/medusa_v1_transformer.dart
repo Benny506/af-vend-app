@@ -18,7 +18,10 @@ class MedusaV1ResponseTransformer extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final String path = options.path.startsWith('/') ? options.path : '/${options.path}';
+    final uri = Uri.tryParse(options.path);
+    final String path = (uri != null && uri.hasAbsolutePath)
+        ? uri.path
+        : (options.path.startsWith('/') ? options.path : '/${options.path}');
 
     final isOrderRetrieve = path.startsWith('/admin/orders/') && 
         !path.contains('/deliveries') && 
@@ -138,15 +141,21 @@ class MedusaV1ResponseTransformer extends Interceptor {
 
     // V1 Create Product payload wrapping and normalization
     if (path == '/admin/products' && options.method == 'POST') {
-      final data = options.data;
-      if (data is Map<String, dynamic>) {
-        final Map<String, dynamic> productData = data.containsKey('product') 
-            ? (data['product'] as Map<String, dynamic>) 
+      var data = options.data;
+      debugPrint('[V1Transformer] Create Product request data type: ${data?.runtimeType}');
+      if (data is! Map && data != null) {
+        try {
+          data = (data as dynamic).toJson();
+        } catch (e) {
+          debugPrint('[V1Transformer] Failed to convert CreateProductReq to map: $e');
+        }
+      }
+      if (data is Map) {
+        final Map productData = data.containsKey('product') 
+            ? (data['product'] as Map) 
             : data;
         _normalizeProductPayload(productData, isUpdate: false);
-        if (!data.containsKey('product')) {
-          options.data = {'product': productData};
-        }
+        options.data = productData; // Medusa V1 expects flat payload
       }
     }
 
@@ -155,16 +164,22 @@ class MedusaV1ResponseTransformer extends Interceptor {
         !path.contains('/variants') && 
         !path.contains('/options') && 
         options.method == 'POST') {
-      final data = options.data;
-      if (data is Map<String, dynamic>) {
-        final Map<String, dynamic> productData = data.containsKey('product') 
-            ? (data['product'] as Map<String, dynamic>) 
+      var data = options.data;
+      debugPrint('[V1Transformer] Update Product request data type: ${data?.runtimeType}');
+      if (data is! Map && data != null) {
+        try {
+          data = (data as dynamic).toJson();
+        } catch (e) {
+          debugPrint('[V1Transformer] Failed to convert UpdateProductReq to map: $e');
+        }
+      }
+      if (data is Map) {
+        final Map productData = data.containsKey('product') 
+            ? (data['product'] as Map) 
             : data;
         productData.remove('variants');
         _normalizeProductPayload(productData, isUpdate: true);
-        if (!data.containsKey('product')) {
-          options.data = {'product': productData};
-        }
+        options.data = productData; // Medusa V1 expects flat payload
       }
     }
 
@@ -183,14 +198,14 @@ class MedusaV1ResponseTransformer extends Interceptor {
     // Request body transformer: V2 Promotions -> V1 Discounts
     if (path.startsWith('/admin/discounts')) {
       final data = options.data;
-      if (data is Map<String, dynamic>) {
+      if (data is Map) {
         final v1Payload = <String, dynamic>{};
         if (data.containsKey('code')) {
           v1Payload['code'] = data['code'];
         }
         
         final appMethod = data['application_method'];
-        if (appMethod is Map<String, dynamic>) {
+        if (appMethod is Map) {
           final ruleMap = <String, dynamic>{};
           ruleMap['type'] = appMethod['type'] ?? 'percentage';
           ruleMap['value'] = appMethod['value'] ?? 0;
@@ -200,13 +215,13 @@ class MedusaV1ResponseTransformer extends Interceptor {
         }
 
         final campaign = data['campaign'];
-        if (campaign is Map<String, dynamic>) {
+        if (campaign is Map) {
           if (campaign.containsKey('starts_at')) v1Payload['starts_at'] = campaign['starts_at'];
           if (campaign.containsKey('ends_at')) v1Payload['ends_at'] = campaign['ends_at'];
         }
         
         final addData = data['additional_data'];
-        if (addData is Map<String, dynamic>) {
+        if (addData is Map) {
           if (addData.containsKey('regions')) v1Payload['regions'] = addData['regions'];
           if (addData.containsKey('is_dynamic')) v1Payload['is_dynamic'] = addData['is_dynamic'];
           if (addData.containsKey('usage_limit')) v1Payload['usage_limit'] = addData['usage_limit'];
@@ -223,9 +238,9 @@ class MedusaV1ResponseTransformer extends Interceptor {
     // Request body transformer: V2 Regions -> V1 Regions
     if (path == '/admin/regions' || (path.startsWith('/admin/regions/') && options.method == 'POST')) {
       final data = options.data;
-      if (data is Map<String, dynamic>) {
+      if (data is Map) {
         final metadata = data['metadata'];
-        if (metadata is Map<String, dynamic> && metadata.containsKey('fulfillment_providers')) {
+        if (metadata is Map && metadata.containsKey('fulfillment_providers')) {
           data['fulfillment_providers'] = metadata['fulfillment_providers'];
           metadata.remove('fulfillment_providers');
         }
@@ -543,7 +558,7 @@ class MedusaV1ResponseTransformer extends Interceptor {
     ));
   }
 
-  void _normalizeProductPayload(Map<String, dynamic> data, {bool isUpdate = false}) {
+  void _normalizeProductPayload(Map data, {bool isUpdate = false}) {
     // Map type_id to type object for V1 compatibility
     if (data.containsKey('type_id') && data['type_id'] != null) {
       data['type'] = {'id': data['type_id']};
@@ -590,7 +605,7 @@ class MedusaV1ResponseTransformer extends Interceptor {
       final tagsList = data['tags'] as List;
       final normalizedTags = <Map<String, dynamic>>[];
       for (final t in tagsList) {
-        if (t is Map<String, dynamic>) {
+        if (t is Map) {
           if (t['value'] != null) {
             normalizedTags.add({
               'value': t['value'].toString(),
@@ -607,10 +622,10 @@ class MedusaV1ResponseTransformer extends Interceptor {
     // 2. Normalize options
     if (data['options'] is List) {
       final optionsList = data['options'] as List;
-      final normalizedOptions = <Map<String, dynamic>>[];
+      final normalizedOptions = <Map>[];
       for (final opt in optionsList) {
-        if (opt is Map<String, dynamic>) {
-          final optCopy = Map<String, dynamic>.from(opt);
+        if (opt is Map) {
+          final optCopy = Map.from(opt);
           optCopy.remove('values'); // V1 options must not have "values"
           optCopy.removeWhere((k, v) => v == null);
           normalizedOptions.add(optCopy);
@@ -622,10 +637,10 @@ class MedusaV1ResponseTransformer extends Interceptor {
     // 3. Normalize variants
     if (data['variants'] is List) {
       final variantsList = data['variants'] as List;
-      final normalizedVariants = <Map<String, dynamic>>[];
+      final normalizedVariants = <Map>[];
       for (final variant in variantsList) {
-        if (variant is Map<String, dynamic>) {
-          final varCopy = Map<String, dynamic>.from(variant);
+        if (variant is Map) {
+          final varCopy = Map.from(variant);
           // Remove V2 variant properties
           varCopy.remove('values');
           varCopy.remove('variant_rank');
@@ -647,8 +662,8 @@ class MedusaV1ResponseTransformer extends Interceptor {
           }
 
           // Clean options: V2 has Map, V1 needs List of { "value": "..." } or { "option_id": "...", "value": "..." }
-          if (varCopy['options'] is Map<String, dynamic>) {
-            final optsMap = varCopy['options'] as Map<String, dynamic>;
+          if (varCopy['options'] is Map) {
+            final optsMap = varCopy['options'] as Map;
             final optsList = <Map<String, dynamic>>[];
             optsMap.forEach((key, val) {
               final Map<String, dynamic> optObj = {

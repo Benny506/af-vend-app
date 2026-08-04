@@ -1,7 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:medusa_admin/src/features/dashboard/presentation/widgets/drawer_widget.dart';
+import 'package:adaptive_dialog/adaptive_dialog.dart';
+import 'package:medusa_admin/src/features/auth/presentation/bloc/authentication/authentication_bloc.dart';
 import 'package:medusa_admin/src/core/extensions/context_extension.dart';
 import 'package:medusa_admin/src/core/routing/app_router.dart';
 import 'package:medusa_admin/src/core/utils/medusa_sliver_app_bar.dart';
@@ -16,7 +17,7 @@ class StoreSettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const AppDrawer(),
+      drawer: null,
       drawerEdgeDragWidth: context.drawerEdgeDragWidth,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
@@ -139,12 +140,27 @@ class StoreSettingsView extends StatelessWidget {
                   onTap: () => context.pushRoute(const SecretApiKeysRoute()),
                 ),
                 const SettingsSectionHeader(title: 'My Account'),
-                SettingsCardTile(
+                 SettingsCardTile(
                   leadingIcon: LucideIcons.user,
                   iconColor: Colors.blueGrey.shade600,
                   title: 'Profile',
                   subtitle: 'Manage account profile information',
                   onTap: () => context.pushRoute(const PersonalInformationRoute()),
+                ),
+                const SettingsSectionHeader(title: 'App & System'),
+                SettingsCardTile(
+                  leadingIcon: LucideIcons.settings,
+                  iconColor: Colors.blueGrey.shade700,
+                  title: 'App Settings',
+                  subtitle: 'Manage app theme, preferences, and details',
+                  onTap: () => context.pushRoute(const AppSettingsRoute()),
+                ),
+                SettingsCardTile(
+                  leadingIcon: LucideIcons.logOut,
+                  iconColor: Colors.red.shade600,
+                  title: 'Sign Out',
+                  subtitle: 'Logout from your account safely',
+                  onTap: () => _signOut(context),
                 ),
               ],
             );
@@ -372,4 +388,20 @@ class SettingsSectionHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+void _signOut(BuildContext context) async {
+  await showOkCancelAlertDialog(
+          context: context,
+          title: 'Sign out',
+          message: 'Are you sure you want to sign out?',
+          okLabel: 'Sign Out',
+          isDestructiveAction: true)
+      .then(
+    (value) async {
+      if (value == OkCancelResult.ok && context.mounted) {
+        context.read<AuthenticationBloc>().add(const AuthenticationEvent.logOut());
+      }
+    },
+  );
 }

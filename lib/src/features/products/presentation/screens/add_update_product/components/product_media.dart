@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
@@ -118,26 +119,30 @@ class _ProductMediaState extends State<ProductMedia> {
                     final image = images[index];
                     return ImageCard(
                       image,
-                      onRename: () async {
-                        final result = await showBarModalBottomSheet(
-                            context: context,
-                            backgroundColor:
-                                context.theme.scaffoldBackgroundColor,
-                            overlayStyle:
-                                context.theme.appBarTheme.systemOverlayStyle,
-                            builder: (context) {
-                              return RenameFileView(image);
-                            });
+                      onRename: kIsWeb
+                          ? null
+                          : () async {
+                              final result = await showBarModalBottomSheet(
+                                  context: context,
+                                  backgroundColor:
+                                      context.theme.scaffoldBackgroundColor,
+                                  overlayStyle:
+                                      context.theme.appBarTheme.systemOverlayStyle,
+                                  builder: (context) {
+                                    return RenameFileView(image);
+                                  });
 
-                        if (result is File) {
-                          setState(() {
-                            images[index] = result;
-                          });
-                        }
-                      },
+                              if (result is File) {
+                                setState(() {
+                                  images[index] = result;
+                                });
+                              }
+                            },
                       onDelete: () async {
                         try {
-                          images[index].delete();
+                          if (!kIsWeb) {
+                            images[index].delete();
+                          }
                           images.removeAt(index);
                           setState(() {});
                         } catch (e) {

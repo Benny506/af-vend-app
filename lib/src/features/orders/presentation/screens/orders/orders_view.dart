@@ -1,6 +1,7 @@
 import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:medusa_admin/src/core/utils/enums.dart';
@@ -86,7 +87,7 @@ class _OrdersViewState extends State<OrdersView> {
       },
       child: Scaffold(
         drawerEdgeDragWidth: context.drawerEdgeDragWidth,
-        drawer: const AppDrawer(),
+        drawer: null,
         // endDrawer: Drawer(
         //   child: OrdersFilterView(
         //     orderFilter: orderFilter,
@@ -138,21 +139,28 @@ class _OrdersViewState extends State<OrdersView> {
         body: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
             MedusaSliverAppBar(
+              backgroundColor: const Color(0xFF344F16),
               title: Builder(builder: (context) {
                 final ordersCount = context.select<OrdersBloc, int?>((bloc) =>
                     bloc.state.mapOrNull(
                         orders: (state) =>
                             state.count > 0 ? state.count : null));
                 return Text(
-                    ordersCount != null ? 'Orders ($ordersCount)' : 'Orders',
-                    overflow: TextOverflow.ellipsis);
+                  ordersCount != null ? 'Orders ($ordersCount)' : 'Orders',
+                  style: GoogleFonts.comfortaa(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.white,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                );
               }),
               actions: [
                 Builder(
                   builder: (context) => IconButton(
                     padding: const EdgeInsets.all(16.0),
                     onPressed: () => context.openEndDrawer(),
-                    icon: Icon(Icons.sort),
+                    icon: const Icon(Icons.sort, color: Colors.white),
                   ),
                 ),
               ],
