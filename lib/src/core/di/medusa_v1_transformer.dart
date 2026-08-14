@@ -649,6 +649,14 @@ class MedusaV1ResponseTransformer extends Interceptor {
 
           varCopy.removeWhere((k, v) => v == null);
 
+          // If metadata has inventory_quantity, extract it to the root of the variant for V1 compatibility
+          if (varCopy['metadata'] is Map && varCopy['metadata']['inventory_quantity'] != null) {
+            varCopy['inventory_quantity'] = varCopy['metadata']['inventory_quantity'];
+            final Map newMeta = Map.from(varCopy['metadata'] as Map);
+            newMeta.remove('inventory_quantity');
+            varCopy['metadata'] = newMeta.isEmpty ? null : newMeta;
+          }
+
           // Clean empty dimensions in variant
           for (final key in ['weight', 'length', 'height', 'width']) {
             if (varCopy.containsKey(key)) {
