@@ -277,6 +277,43 @@ class MedusaV1ResponseTransformer extends Interceptor {
       return;
     }
 
+    // V2 → V1 path rewrite: Order fulfillment creation
+    // V2 uses POST /admin/orders/:id/fulfillments (plural)
+    // V1 uses POST /admin/orders/:id/fulfillment (singular)
+    final fulfillmentCreateRegex = RegExp(r'^/admin/orders/[^/]+/fulfillments$');
+    if (fulfillmentCreateRegex.hasMatch(path) && options.method == 'POST') {
+      options.path = options.path.replaceFirst('/fulfillments', '/fulfillment');
+      debugPrint('[V1Transformer] Rewrote fulfillment path: ${options.path}');
+    }
+
+    // V2 → V1 path rewrite: Mark fulfillment as shipped
+    // V2 uses POST /admin/orders/:id/fulfillments/:fid/shipment
+    // V1 uses POST /admin/orders/:id/shipment
+    final shipmentRegex = RegExp(r'^/admin/orders/([^/]+)/fulfillments/([^/]+)/shipment$');
+    final shipmentMatch = shipmentRegex.firstMatch(path);
+    if (shipmentMatch != null && options.method == 'POST') {
+      final orderId = shipmentMatch.group(1)!;
+      final fulfillmentId = shipmentMatch.group(2)!;
+      options.path = '/admin/orders/$orderId/shipment';
+      // Pass fulfillment_id in body so V1 knows which fulfillment to ship
+      final existingData = options.data;
+      final Map<String, dynamic> body = existingData is Map
+          ? Map<String, dynamic>.from(existingData as Map)
+          : <String, dynamic>{};
+      body['fulfillment_id'] = fulfillmentId;
+      options.data = body;
+      debugPrint('[V1Transformer] Rewrote shipment path: ${options.path}');
+    }
+
+    // V2 → V1 path rewrite: Cancel fulfillment
+    // V2 uses DELETE /admin/orders/:id/fulfillments/:fid/cancel
+    // V1 uses POST /admin/orders/:id/fulfillments/:fid/cancel (same path, ignore)
+    final cancelFulfillmentRegex = RegExp(r'^/admin/orders/[^/]+/fulfillments/[^/]+/cancel$');
+    if (cancelFulfillmentRegex.hasMatch(path) && options.method == 'POST') {
+      // V1 also uses POST for cancel — already correct, no rewrite needed
+      debugPrint('[V1Transformer] Fulfillment cancel path OK: $path');
+    }
+
     handler.next(options);
   }
 
@@ -564,14 +601,27 @@ class MedusaV1ResponseTransformer extends Interceptor {
       data['type'] = {'id': data['type_id']};
     }
 
-    // Remove V2 keys that are null or not supported at root
+    // Normalize sales_channels for V1 format: [{ id: 'sc_...' }]
+    // V1 POST /admin/products DOES support sales_channels.
+    // Preserve and normalize before the cleanup loop below.
+    List<Map<String, dynamic>>? normalizedSalesChannels;
+    final rawSalesChannels = data['sales_channels'];
+    if (rawSalesChannels is List && rawSalesChannels.isNotEmpty) {
+      normalizedSalesChannels = rawSalesChannels
+          .whereType<Map>()
+          .map((sc) => <String, dynamic>{'id': sc['id'].toString()})
+          .where((sc) => sc['id'] != null && sc['id'] != 'null')
+          .toList();
+    }
+
+    // Remove V2 keys that are null or not supported at root in V1
     final keysToRemove = [
       'type_id',
       'external_id',
       'shipping_profile_id',
       'profile_id',
       'categories',
-      'sales_channels',
+      'sales_channels', // will be re-added below in V1 format
       'store_id',
       'deleted_at',
       'updated_at',
@@ -584,6 +634,12 @@ class MedusaV1ResponseTransformer extends Interceptor {
     for (final key in keysToRemove) {
       data.remove(key);
     }
+
+    // Re-attach normalized sales_channels if we have any
+    if (normalizedSalesChannels != null && normalizedSalesChannels.isNotEmpty) {
+      data['sales_channels'] = normalizedSalesChannels;
+    }
+
 
     // Clean null fields at root to prevent V1 validation complaints
     data.removeWhere((key, value) => value == null);
@@ -793,6 +849,27 @@ class MedusaV1ResponseTransformer extends Interceptor {
         final discount = data['discount'];
         if (discount != null && !data.containsKey('promotion')) {
           data['promotion'] = discount;
+        }
+      }
+
+      // V1 → V2 upload response remap:
+      // V1 POST /admin/uploads returns: { "uploads": [{ "url": "..." }] }
+      // V2 client expects:              { "files":   [{ "url": "...", "id": "...", "key": "..." }] }
+      if (path.contains('/admin/uploads') && method == 'POST') {
+        final v1Uploads = data['uploads'];
+        if (v1Uploads is List && !data.containsKey('files')) {
+          final mappedFiles = v1Uploads.map((item) {
+            if (item is Map<String, dynamic>) {
+              return {
+                'url': item['url'] ?? '',
+                'id':  item['id']  ?? item['key'] ?? item['url'] ?? '',
+                'key': item['key'] ?? item['url'] ?? '',
+              };
+            }
+            return {'url': item.toString(), 'id': item.toString(), 'key': item.toString()};
+          }).toList();
+          data['files'] = mappedFiles;
+          debugPrint('[V1Transformer] Remapped ${mappedFiles.length} upload(s): uploads -> files');
         }
       }
 

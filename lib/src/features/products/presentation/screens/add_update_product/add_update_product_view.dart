@@ -24,6 +24,7 @@ import 'package:medusa_admin_dart_client/src/features/products/data/models/creat
 import 'package:medusa_admin/src/core/utils/file_use_case/upload_use_case.dart';
 import 'package:medusa_admin/src/core/utils/image_picker_helper.dart';
 import 'package:medusa_admin/src/core/di/di.dart';
+import 'package:medusa_admin/src/core/di/medusa_v1_client.dart';
 
 import 'components/index.dart';
 import 'package:medusa_admin/src/core/extensions/context_extension.dart';
@@ -901,6 +902,25 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
     );
   }
 
+  /// Fetches the first available sales channel from Medusa.
+  /// Used to ensure products are assigned to a sales channel on creation.
+  /// Returns an empty list on failure (graceful fallback).
+  Future<List<Map<String, String>>> _fetchDefaultSalesChannels() async {
+    try {
+      final medusa = getIt<InterceptedMedusa>();
+      final res = await medusa.admin.salesChannels.list();
+      final channels = res.salesChannels;
+      if (channels != null && channels.isNotEmpty) {
+        return [{'id': channels.first.id ?? ''}]
+            .where((m) => m['id']!.isNotEmpty)
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('[AddUpdateProduct] Could not fetch sales channels: $e');
+    }
+    return [];
+  }
+
   Future<void> createProduct() async {
     EasyLoading.show(status: 'Creating product...');
     try {
@@ -966,6 +986,9 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
           )
         ];
 
+        // Fetch default sales channel for product assignment
+        final defaultSalesChannels = await _fetchDefaultSalesChannels();
+
         productCrudBloc.add(ProductCrudEvent.create(CreateProductReq(
           title: title,
           description: description,
@@ -976,6 +999,7 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
           variants: finalVariants,
           discountable: true,
           isGiftcard: false,
+          salesChannels: defaultSalesChannels.isEmpty ? null : defaultSalesChannels,
         )));
       } else {
         // Advanced Mode
@@ -1028,6 +1052,9 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
           )).toList();
         }
 
+        // Fetch default sales channel for product assignment
+        final defaultSalesChannels = await _fetchDefaultSalesChannels();
+
         productCrudBloc.add(ProductCrudEvent.create(CreateProductReq(
           title: product?.title ?? '',
           subtitle: product?.subtitle,
@@ -1048,6 +1075,7 @@ class _AddUpdateProductViewState extends State<AddUpdateProductView> {
           originCountry: product?.originCountry,
           midCode: product?.midCode?.toString(),
           material: product?.material,
+          salesChannels: defaultSalesChannels.isEmpty ? null : defaultSalesChannels,
         )));
       }
     } catch (e) {

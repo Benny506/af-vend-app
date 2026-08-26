@@ -14,6 +14,11 @@ import 'package:medusa_admin/src/core/utils/hide_keyboard.dart';
 import 'package:medusa_admin/src/features/auth/data/service/auth_preference_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// Superadmin API key used for creating Medusa users during vendor signup.
+// Matches the pattern in signup-wizard.jsx:
+//   const medusa = new Medusa({ apiKey: "usr_01HPESKGDTMNHYK8HXH1A7AP4Q", ... })
+const String _medusaSuperadminApiKey = 'usr_01HPESKGDTMNHYK8HXH1A7AP4Q';
+
 @RoutePage()
 class SignupWizardView extends StatefulWidget {
   const SignupWizardView({super.key});
@@ -254,39 +259,50 @@ class _SignupWizardViewState extends State<SignupWizardView> {
         'phone': _phoneCtrl.text.trim(),
       });
 
-      // 4. Medusa User Creation (calls POST /admin/users)
+      // 4. Medusa User Creation via authenticated superadmin client
+      // Uses a hardcoded superadmin API key to call POST /admin/users,
+      // exactly as the web app does in signup-wizard.jsx:
+      //   const medusa = new Medusa({ apiKey: "usr_01HPESKGDTMNHYK8HXH1A7AP4Q" })
       final baseUrl = AuthPreferenceService.baseUrlGetter ?? '';
-      final dio = Dio();
-      final medusaRes = await dio.post(
-        '$baseUrl/admin/users',
-        data: {
-          'email': email,
-          'password': password,
-        },
-      );
+      try {
+        final adminDio = Dio(BaseOptions(baseUrl: baseUrl));
+        adminDio.options.headers['x-medusa-access-token'] = _medusaSuperadminApiKey;
 
-      final medusaUserId = medusaRes.data['user']?['id'];
-      if (medusaUserId != null) {
-        // 5. Update api_token on Medusa user
-        await dio.post(
-          '$baseUrl/admin/users/$medusaUserId',
+        final medusaRes = await adminDio.post(
+          '/admin/users',
           data: {
-            'api_token': medusaUserId,
+            'email': email,
+            'password': password,
           },
         );
 
-        // 6. Setup default AFM_Store settings if user store_id exists
-        final storeId = medusaRes.data['user']?['store_id'];
-        if (storeId != null) {
-          await supabase.from('store_currencies').insert({
-            'store_id': storeId,
-            'currency_code': 'ngn',
-          });
-          await supabase.from('store').update({
-            'default_currency_code': 'ngn',
-            'name': 'AFM_Store',
-          }).eq('id', storeId);
+        final medusaUserId = medusaRes.data['user']?['id'];
+        if (medusaUserId != null) {
+          // 5. Update api_token on Medusa user (set to user's own id, matching web pattern)
+          await adminDio.post(
+            '/admin/users/$medusaUserId',
+            data: {
+              'api_token': medusaUserId,
+            },
+          );
+
+          // 6. Setup default AFM_Store settings if user store_id exists
+          final storeId = medusaRes.data['user']?['store_id'];
+          if (storeId != null) {
+            await supabase.from('store_currencies').insert({
+              'store_id': storeId,
+              'currency_code': 'ngn',
+            });
+            await supabase.from('store').update({
+              'default_currency_code': 'ngn',
+              'name': 'AFM_Store',
+            }).eq('id', storeId);
+          }
         }
+      } catch (medusaErr) {
+        // Medusa user creation is best-effort — the Supabase account is the
+        // primary identity. Log the failure but don't block signup.
+        debugPrint('[SignupWizard] Medusa user creation failed (non-fatal): $medusaErr');
       }
 
       EasyLoading.dismiss();
