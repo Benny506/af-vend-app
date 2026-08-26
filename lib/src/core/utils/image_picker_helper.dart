@@ -51,8 +51,17 @@ class ImagePickerHelper {
     }
     await File(imagePath).delete();
 
-    return File(croppedFile.path)
-        .rename(croppedFile.path.replaceAll('image_cropper_', ''));
+    // Safe rename via byte-copy to avoid cross-filesystem errors on Android
+    try {
+      final bytes = await File(croppedFile.path).readAsBytes();
+      final cleanPath = croppedFile.path.replaceAll('image_cropper_', '');
+      if (cleanPath != croppedFile.path) {
+        final dest = File(cleanPath);
+        await dest.writeAsBytes(bytes, flush: true);
+        return dest;
+      }
+    } catch (_) {}
+    return File(croppedFile.path);
   }
 
   Future<List<File>> multipleImagePicker(
@@ -70,8 +79,22 @@ class ImagePickerHelper {
         webBytesCache[element.path] = bytes;
         images.add(File(element.path));
       } else {
-        images.add(File(element.path)
-            .renameSync(element.path.replaceAll('image_picker_', '')));
+        // On Android, renameSync across filesystem boundaries throws
+        // FileSystemException. Use a safe byte-copy to temp directory instead.
+        try {
+          final bytes = await element.readAsBytes();
+          final tempDir = await getTemporaryDirectory();
+          // Use the original filename (without any picker prefix) as the dest name
+          final originalName = element.path.split('/').last
+              .replaceAll('image_picker_', '');
+          final destPath = '${tempDir.path}/${DateTime.now().microsecondsSinceEpoch}_$originalName';
+          final destFile = File(destPath);
+          await destFile.writeAsBytes(bytes, flush: true);
+          images.add(destFile);
+        } catch (e) {
+          // Fallback: use the original path as-is
+          images.add(File(element.path));
+        }
       }
     }
     return images;
@@ -88,7 +111,16 @@ class ImagePickerHelper {
     if (croppedFile == null) {
       return null;
     }
-    return File(croppedFile.path)
-        .renameSync(croppedFile.path.replaceAll('image_cropper_', ''));
+    // Safe rename via byte-copy to avoid cross-filesystem errors on Android
+    try {
+      final bytes = await File(croppedFile.path).readAsBytes();
+      final cleanPath = croppedFile.path.replaceAll('image_cropper_', '');
+      if (cleanPath != croppedFile.path) {
+        final dest = File(cleanPath);
+        await dest.writeAsBytes(bytes, flush: true);
+        return dest;
+      }
+    } catch (_) {}
+    return File(croppedFile.path);
   }
 }
