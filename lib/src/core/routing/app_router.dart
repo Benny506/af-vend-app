@@ -1,3 +1,4 @@
+import 'package:medusa_admin/src/features/store_settings/presentation/screens/store_settings/account_update_wizard_view.dart';
 import 'dart:io';
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
@@ -162,6 +163,8 @@ class AppRouter extends RootStackRouter {
         AutoRoute(page: ResetPasswordRoute.page),
         AutoRoute(page: UrlConfigureRoute.page),
         AutoRoute(page: SignupWizardRoute.page),
+        AutoRoute(page: AccountUpdateWizardRoute.page),
+
       ]),
 
       AutoRoute(page: MainAppRoute.page, children: [

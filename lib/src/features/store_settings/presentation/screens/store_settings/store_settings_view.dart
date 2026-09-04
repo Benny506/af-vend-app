@@ -48,6 +48,13 @@ class StoreSettingsView extends StatelessWidget {
                 const SizedBox(height: 12.0),
                 const SettingsSectionHeader(title: 'General'),
                 SettingsCardTile(
+                  leadingIcon: LucideIcons.wand2,
+                  iconColor: Colors.deepPurple.shade600,
+                  title: 'Store & Profile Setup Wizard',
+                  subtitle: 'Update your personal info, store address, and market details step-by-step',
+                  onTap: () => context.pushRoute(const AccountUpdateWizardRoute()),
+                ),
+                SettingsCardTile(
                   leadingIcon: LucideIcons.store,
                   iconColor: Colors.blue.shade600,
                   title: 'Store Details',
