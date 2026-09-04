@@ -29,8 +29,7 @@ class _OnboardingApi {
       String phone, String? email) async {
     final body = <String, dynamic>{'phone': phone};
     if (email != null && email.isNotEmpty) body['email'] = email;
-    final res =
-        await _dio().post('/admin/vendor/onboarding/check', data: body);
+    final res = await _dio().post('/admin/vendor/onboarding/check', data: body);
     return Map<String, dynamic>.from(res.data as Map);
   }
 
@@ -209,7 +208,7 @@ class _SignupWizardViewState extends State<SignupWizardView> {
 
   // ── Phone pre-check + OTP send ──────────────────────────────────────────
   Future<void> _checkPhoneAndSendOtp() async {
-    // If an OTP is already in flight (cooldown active) just advance
+    // If an OTP is already in flight (cooldown active) just advance.
     if (_otpCooldown > 0) {
       _goToPage(3);
       return;
@@ -298,8 +297,8 @@ class _SignupWizardViewState extends State<SignupWizardView> {
         _startCooldownTimer();
         context.showSnackBar('New OTP sent!');
       } else {
-        context.showSnackBar(
-            res['message']?.toString() ?? 'Failed to resend OTP');
+        context
+            .showSnackBar(res['message']?.toString() ?? 'Failed to resend OTP');
       }
     } on DioException catch (e) {
       EasyLoading.dismiss();
@@ -368,7 +367,7 @@ class _SignupWizardViewState extends State<SignupWizardView> {
 
     EasyLoading.show(status: 'Creating your account…');
     try {
-      // 1. Register via Medusa backend (creates User + Store + Wallet)
+      // 1. Register via Medusa backend (creates User + Store + Wallet).
       final regRes = await _OnboardingApi.register(
         phone: phone,
         email: email,
@@ -382,12 +381,13 @@ class _SignupWizardViewState extends State<SignupWizardView> {
       );
 
       if (regRes['success'] != true) {
-        throw Exception(regRes['message']?.toString() ?? 'Registration failed.');
+        throw Exception(
+            regRes['message']?.toString() ?? 'Registration failed.');
       }
 
       final medusaUserId = regRes['user']?['id'];
 
-      // 2. Supabase sign-up (supplemental — for session / push notifications)
+      // 2. Supabase sign-up (supplemental — for session / push notifications).
       try {
         final supabase = Supabase.instance.client;
         final fullName = _accountType == 'vendor'
@@ -404,7 +404,7 @@ class _SignupWizardViewState extends State<SignupWizardView> {
           },
         );
 
-        // Best-effort upsert into public.users
+        // Best-effort upsert into public.users.
         try {
           await supabase.from('users').upsert({
             'email': email,
@@ -423,12 +423,11 @@ class _SignupWizardViewState extends State<SignupWizardView> {
       EasyLoading.dismiss();
       EasyLoading.showSuccess('Registration successful! Please log in.');
       if (!mounted) return;
-      context.router.popForced();
+      context.router.pop();
     } on DioException catch (e) {
       EasyLoading.dismiss();
       if (!mounted) return;
-      final msg =
-          e.response?.data?['message'] ?? e.message ?? 'Unknown error';
+      final msg = e.response?.data?['message'] ?? e.message ?? 'Unknown error';
       context.showSnackBar('Registration failed: $msg');
     } catch (e) {
       EasyLoading.dismiss();
@@ -514,18 +513,24 @@ class _SignupWizardViewState extends State<SignupWizardView> {
           const Gap(24),
           Expanded(
             child: ListView(children: [
-              _typeCard('vendor', 'Vendor',
+              _typeCard(
+                  'vendor',
+                  'Vendor',
                   'Register as a vendor seller to manage products and fulfill orders.',
                   Icons.storefront),
               const Gap(12),
-              _typeCard('logistics_staff', 'Logistics Staff',
+              _typeCard(
+                  'logistics_staff',
+                  'Logistics Staff',
                   'Participate as a logistics agent or dispatcher.',
                   Icons.local_shipping),
               const Gap(12),
               _typeCard('intern', 'Intern / Agent',
                   'Access intern administrative controls.', Icons.badge),
               const Gap(12),
-              _typeCard('dropshipper', 'Dropshipper',
+              _typeCard(
+                  'dropshipper',
+                  'Dropshipper',
                   'Configure specialized dropshipping preferences.',
                   Icons.shopping_bag),
             ]),
@@ -552,7 +557,7 @@ class _SignupWizardViewState extends State<SignupWizardView> {
               color: isSelected ? accent : Colors.grey.shade300,
               width: isSelected ? 2 : 1),
           color: isSelected
-              ? accent.withOpacity(0.08)
+              ? accent.withValues(alpha: 0.08)
               : Theme.of(context).cardColor,
         ),
         child: Row(children: [
@@ -560,16 +565,17 @@ class _SignupWizardViewState extends State<SignupWizardView> {
           const Gap(16),
           Expanded(
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                  const Gap(4),
-                  Text(desc,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600)),
-                ]),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+                const Gap(4),
+                Text(desc,
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              ],
+            ),
           ),
         ]),
       ),
@@ -633,8 +639,7 @@ class _SignupWizardViewState extends State<SignupWizardView> {
             controller: _phoneCtrl,
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(
-                hintText: '+234 123 4567 890',
-                border: OutlineInputBorder()),
+                hintText: '+234 123 4567 890', border: OutlineInputBorder()),
           ),
           const Gap(8),
           Text(
@@ -816,18 +821,17 @@ class _SignupWizardViewState extends State<SignupWizardView> {
 
   Widget _fld(TextEditingController c, String hint) => TextField(
       controller: c,
-      decoration: InputDecoration(
-          hintText: hint, border: const OutlineInputBorder()));
+      decoration:
+          InputDecoration(hintText: hint, border: const OutlineInputBorder()));
 
   Widget _nextBtn(String label) => FilledButton(
         style: FilledButton.styleFrom(
           backgroundColor: const Color(0xFF344F16),
           minimumSize: const Size(double.infinity, 50.0),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
         ),
         onPressed: _nextStep,
-        child: Text(label,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
       );
 }
