@@ -46,7 +46,7 @@ class UserCrudBloc extends Bloc<UserCrudEvent, UserCrudState> {
 
   Future<void> _loadAll(_LoadAll event, Emitter<UserCrudState> emit) async {
     emit(const _Loading());
-    final result = await _useCase.fetchUsers();
+    final result = await _useCase.fetchUsers(queryParameters: event.queryParameters);
     result.when(
       (response) => emit(_Users(response.users, response.count)),
       (error) => emit(_Error(error)),

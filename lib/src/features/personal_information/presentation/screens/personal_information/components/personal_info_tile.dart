@@ -55,6 +55,25 @@ class PersonalInfoTile extends StatelessWidget {
                         if (user?.firstName != null && user?.lastName != null)
                           const SizedBox(height: 6.0),
                         Text(user?.email ?? ''),
+                        const SizedBox(height: 6.0),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.verified_user_rounded,
+                              size: 14,
+                              color: Colors.green.shade600,
+                            ),
+                            const SizedBox(width: 4.0),
+                            Text(
+                              'Email Verified (Supabase / OTP)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   )

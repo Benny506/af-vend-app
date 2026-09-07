@@ -109,7 +109,7 @@ class _AccountUpdateWizardViewState extends State<AccountUpdateWizardView> {
 
       _firstNameCtrl.text = user.firstName ?? '';
       _lastNameCtrl.text = user.lastName ?? '';
-      _emailCtrl.text = user.email!;
+      _emailCtrl.text = user.email ?? '';
 
       // phone/country are stored in store metadata and loaded below
 

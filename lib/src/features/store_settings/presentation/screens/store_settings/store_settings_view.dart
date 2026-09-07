@@ -55,6 +55,13 @@ class StoreSettingsView extends StatelessWidget {
                   onTap: () => context.pushRoute(const AccountUpdateWizardRoute()),
                 ),
                 SettingsCardTile(
+                  leadingIcon: LucideIcons.wallet,
+                  iconColor: Colors.green.shade600,
+                  title: 'Vendor Wallet & Payout Accounts',
+                  subtitle: 'Manage balance, business bank accounts, settlements, and payout requests',
+                  onTap: () => context.pushRoute(const VendorWalletRoute()),
+                ),
+                SettingsCardTile(
                   leadingIcon: LucideIcons.store,
                   iconColor: Colors.blue.shade600,
                   title: 'Store Details',
