@@ -1,3 +1,4 @@
+import 'package:medusa_admin/src/core/routing/app_router.dart';
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
@@ -90,19 +91,74 @@ class _PersonalInformationViewState extends State<PersonalInformationView> {
                       lastName: 'Js',
                       id: '',
                     ))),
-                user: (user) => PersonalInfoTile(
-                  user,
-                  onTap: () async => await updatePersonalInformation(user),
-                ),
-                error: (e) => Column(
+                user: (user) => ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   children: [
-                    Center(child: Text(e.toSnackBarString())),
-                    const SizedBox(height: 8.0),
-                    ElevatedButton(
-                        onPressed: () =>
-                            userBloc.add(const UserCrudEvent.loadCurrentUser()),
-                        child: const Text('Retry')),
+                    PersonalInfoTile(
+                      user,
+                      onTap: () async => await updatePersonalInformation(user),
+                    ),
+                    const SizedBox(height: 16.0),
+                    Card(
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.deepPurple.shade50,
+                          child: Icon(Icons.auto_awesome_outlined, color: Colors.deepPurple.shade600),
+                        ),
+                        title: const Text('Store & Profile Wizard', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Update your complete store address, commercial market, and personal details.'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () async {
+                          await context.pushRoute(const AccountUpdateWizardRoute());
+                          userBloc.add(const UserCrudEvent.loadCurrentUser());
+                        },
+                      ),
+                    ),
                   ],
+                ),
+                error: (e) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline, size: 48, color: Colors.amber.shade700),
+                        const SizedBox(height: 16.0),
+                        Text(
+                          'Unable to load personal information',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8.0),
+                        Text(
+                          e.toSnackBarString(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                        ),
+                        const SizedBox(height: 20.0),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => userBloc.add(const UserCrudEvent.loadCurrentUser()),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                            const SizedBox(width: 12.0),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await context.pushRoute(const AccountUpdateWizardRoute());
+                                userBloc.add(const UserCrudEvent.loadCurrentUser());
+                              },
+                              icon: const Icon(Icons.auto_awesome_outlined),
+                              label: const Text('Open Wizard'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 orElse: () => const SizedBox.shrink(),
               ),
